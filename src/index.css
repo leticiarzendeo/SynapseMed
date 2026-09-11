@@ -1,0 +1,168 @@
+@import "tailwindcss";
+
+@theme {
+  --color-on-surface-variant: #434655;
+  --color-inverse-on-surface: #eaf1ff;
+  --color-secondary: #565e74;
+  --color-on-surface: #0b1c30;
+  --color-on-primary-container: #eeefff;
+  --color-outline: #737686;
+  --color-surface-dim: #cbdbf5;
+  --color-on-secondary: #ffffff;
+  --color-surface-container-low: #eff4ff;
+  --color-tertiary-fixed-dim: #d0bcff;
+  --color-secondary-fixed: #dae2fd;
+  --color-on-background: #0b1c30;
+  --color-surface: #f8f9ff;
+  --color-surface-variant: #d3e4fe;
+  --color-on-tertiary-fixed: #23005c;
+  --color-inverse-surface: #213145;
+  --color-on-primary: #ffffff;
+  --color-surface-container: #e5eeff;
+  --color-on-secondary-container: #5c647a;
+  --color-on-primary-fixed-variant: #003ea8;
+  --color-tertiary-fixed: #e9ddff;
+  --color-surface-container-high: #dce9ff;
+  --color-secondary-fixed-dim: #bec6e0;
+  --color-on-error: #ffffff;
+  --color-on-secondary-fixed-variant: #3f465c;
+  --color-primary-container: #2563eb;
+  --color-on-error-container: #93000a;
+  --color-on-tertiary: #ffffff;
+  --color-primary-fixed-dim: #b4c5ff;
+  --color-outline-variant: #c3c6d7;
+  --color-on-tertiary-fixed-variant: #5516be;
+  --color-primary-fixed: #dbe1ff;
+  --color-primary: #004ac6;
+  --color-on-tertiary-container: #f6edff;
+  --color-background: #f8f9ff;
+  --color-tertiary-container: #7d4ce7;
+  --color-on-primary-fixed: #00174b;
+  --color-surface-bright: #f8f9ff;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-secondary-fixed: #131b2e;
+  --color-surface-tint: #0053db;
+  --color-surface-container-lowest: #ffffff;
+  --color-secondary-container: #dae2fd;
+  --color-tertiary: #632ecd;
+  --color-surface-container-highest: #d3e4fe;
+  --color-inverse-primary: #b4c5ff;
+
+  --font-headline-lg: 'Geist', sans-serif;
+  --font-headline-md: 'Geist', sans-serif;
+  --font-headline-sm: 'Geist', sans-serif;
+  --font-body-lg: 'Geist', sans-serif;
+  --font-body-md: 'Geist', sans-serif;
+  --font-body-sm: 'Geist', sans-serif;
+  --font-label-md: 'Geist', sans-serif;
+  --font-label-sm: 'Geist', sans-serif;
+  --font-code-metric: 'JetBrains Mono', monospace;
+  --font-metric-display: 'JetBrains Mono', monospace;
+  --font-display: 'Geist', sans-serif;
+
+  --spacing-space-2xs: 0.125rem;
+  --spacing-space-xs: 0.25rem;
+  --spacing-space-sm: 0.5rem;
+  --spacing-space-md: 0.75rem;
+  --spacing-space-base: 1rem;
+  --spacing-space-lg: 1.25rem;
+  --spacing-space-xl: 1.5rem;
+  --spacing-space-2xl: 2rem;
+  --spacing-space-3xl: 3rem;
+  --spacing-gutter-desktop: 1.5rem;
+  --spacing-gutter-mobile: 1rem;
+  --spacing-max-width-content: 88rem;
+}
+
+@layer base {
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  body {
+    overscroll-behavior: none;
+    background-color: var(--color-background);
+    color: var(--color-on-surface);
+  }
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  * {
+    scrollbar-width: none;
+  }
+}
+
+.text-headline-lg {
+  font-size: 2rem;
+  line-height: 1.25;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+}
+
+.text-headline-md {
+  font-size: 1.375rem;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+
+.text-headline-sm {
+  font-size: 1.125rem;
+  line-height: 1.4;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+}
+
+.text-body-lg {
+  font-size: 1rem;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+}
+
+.text-body-md {
+  font-size: 0.875rem;
+  line-height: 1.55;
+  letter-spacing: -0.005em;
+}
+
+.text-body-sm {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  letter-spacing: 0em;
+}
+
+.text-label-md {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  font-weight: 500;
+}
+
+.text-label-sm {
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+  font-weight: 500;
+}
+
+.font-code-metric {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+}
+
