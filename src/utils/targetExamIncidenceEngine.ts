@@ -1143,12 +1143,44 @@ export function classifyQuestionStatementWithAI(params: {
  * - faixas: Muito frequente, Frequente, Moderada, Pouco frequente, Raro
  * - Score 0-100 para alimentar o algoritmo de prioridade existente
  */
+/**
+ * Retorna as questões que estão pendentes de validação manual / fora das estatísticas oficiais
+ */
+export function getPendingConfirmationQuestions(allQuestions?: ExamQuestionEntry[]): ExamQuestionEntry[] {
+  const list = allQuestions || loadAllTargetExamQuestions();
+  return list.filter((q) => {
+    if (q.isConfirmedForOfficialStats === false) return true;
+    if (q.confidenceStatus === 'PRECISA_CONFIRMACAO' || q.confidenceStatus === 'PROVAVEL') {
+      return !q.isConfirmedForOfficialStats;
+    }
+    if (q.institutionConfidence === 'PRECISA_CONFIRMACAO' || q.yearConfidence === 'PRECISA_CONFIRMACAO') {
+      return !q.isConfirmedForOfficialStats;
+    }
+    return false;
+  });
+}
+
 export function calculateTargetInstitutionsIncidence(
   contentId: string,
   allQuestions?: ExamQuestionEntry[]
 ): ContentTargetIncidenceStats {
-  const questions = allQuestions || loadAllTargetExamQuestions();
-  const relatedQuestions = questions.filter((q) => q.contentId === contentId);
+  const allLoaded = allQuestions || loadAllTargetExamQuestions();
+
+  // REGRA ESTRITA SYNAPSEMED:
+  // Somente questões com metadados CONFIRMADOS são incluídas no cálculo oficial.
+  // Questões com status "PROVÁVEL" ou "PRECISA DE CONFIRMAÇÃO" permanecem isoladas.
+  const eligibleQuestions = allLoaded.filter((q) => {
+    if (q.isConfirmedForOfficialStats === false) return false;
+    if (q.confidenceStatus === 'PRECISA_CONFIRMACAO' || q.confidenceStatus === 'PROVAVEL') {
+      return q.isConfirmedForOfficialStats === true;
+    }
+    if (q.institutionConfidence === 'PRECISA_CONFIRMACAO' || q.yearConfidence === 'PRECISA_CONFIRMACAO') {
+      return q.isConfirmedForOfficialStats === true;
+    }
+    return true;
+  });
+
+  const relatedQuestions = eligibleQuestions.filter((q) => q.contentId === contentId);
 
   const totalQuestions = relatedQuestions.length;
 

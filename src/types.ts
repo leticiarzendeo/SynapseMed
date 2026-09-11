@@ -111,6 +111,68 @@ export interface FSRSMemoryState {
   state: 'novo' | 'aprendendo' | 'revisando' | 'reaprendendo';
 }
 
+export type IdentificationConfidenceLevel = 'CONFIRMADO' | 'PROVAVEL' | 'PRECISA_CONFIRMACAO';
+
+export interface ExamPdfAuditReport {
+  sourceFileName: string;
+  fileSizeBytes?: number;
+  totalCharactersExtracted: number;
+  estimatedPagesCount: number;
+
+  // 1. Identificação da Instituição
+  detectedInstitution: string; // ex: 'USP-RP', 'USP-SP', 'UNICAMP', 'ENAMED', 'HIAE' ou 'NÃO CONFIRMADO'
+  targetInstitutionKey?: TargetInstitutionKey;
+  institutionConfidence: IdentificationConfidenceLevel;
+  institutionEvidenceSnippet: string; // Trecho explícito encontrado no documento (capa, cabeçalho, rodapé, edital)
+  institutionConflictDetected: boolean;
+  institutionConflictDetail?: string;
+
+  // 2. Identificação do Ano da Prova
+  detectedYear: number | null;
+  yearConfidence: IdentificationConfidenceLevel;
+  yearEvidenceSnippet: string; // Trecho comprovando o ano de aplicação
+  yearConflictDetected: boolean;
+  yearConflictDetail?: string;
+  yearDiscrepancyNotes?: {
+    examApplicationYear?: number;
+    editalPublicationYear?: number;
+    academicYear?: number;
+    fileUploadYearPrevented?: number;
+    explanation: string;
+  };
+
+  // 3. Identificação e Numeração das Questões
+  totalIdentifiedQuestions: number;
+  firstQuestionNumber: number;
+  lastQuestionNumber: number;
+  sequenceIsComplete: boolean;
+  missingQuestionNumbers: number[]; // ex: [4, 47] quando a sequência é quebrada
+  unprocessedQuestionNumbers: number[]; // questões marcadas "Questão não processada — revisão necessária"
+  splitQuestionsMerged: {
+    questionNumber: number;
+    startPage: number;
+    endPage: number;
+    snippet: string;
+  }[];
+  imageDependentQuestions: {
+    questionNumber: number;
+    visualType: 'ECG' | 'TC' | 'RX' | 'Fotografia' | 'Tabela' | 'Gráfico' | 'Imagem Ilustrativa' | 'Outro';
+    needsVisualReview: boolean;
+    description: string;
+  }[];
+  duplicatedDetections: {
+    type: 'capa_duplicada' | 'pagina_duplicada' | 'questao_duplicada' | 'versao_repetida';
+    detail: string;
+    resolvedAction: string;
+  }[];
+
+  // Resumo Global antes da análise
+  overallStatus: 'CONFIRMADO' | 'PRECISA_CONFIRMACAO';
+  summaryBadgeText: string;
+  canAddToOfficialStats: boolean;
+  systemRecommendation: string;
+}
+
 export type TargetInstitutionKey = 'USP-RP' | 'USP-SP' | 'UNICAMP' | 'ENAMED' | 'HIAE';
 
 export type IncidenceFrequencyTier =
@@ -656,6 +718,21 @@ export interface ExamQuestionEntry {
     contentName: string;
     contentId: string;
   };
+  // Metadados de Auditoria Rigorosa de PDF (Precisão SynapseMed)
+  sourceFileName?: string;
+  originalQuestionNumber?: number; // Preserva numeração original da prova (ex: 21 permanece 21)
+  sourcePage?: number | string; // Página no documento (ex: 10 ou "10-11")
+  isSplitAcrossPages?: boolean; // Questão dividida entre páginas concatenada
+  hasVisualElement?: boolean; // ECG, RX, TC, foto, gráfico, tabela
+  visualType?: 'ECG' | 'TC' | 'RX' | 'Fotografia' | 'Tabela' | 'Gráfico' | 'Imagem Ilustrativa' | 'Outro';
+  requiresVisualInspection?: boolean; // Se a imagem for mandatória para o assunto
+  visualWarningNote?: string;
+  isUnprocessed?: boolean; // "Questão não processada — revisão necessária"
+  unprocessedReason?: string;
+  confidenceStatus?: IdentificationConfidenceLevel; // 'CONFIRMADO' | 'PROVAVEL' | 'PRECISA_CONFIRMACAO'
+  institutionConfidence?: IdentificationConfidenceLevel;
+  yearConfidence?: IdentificationConfidenceLevel;
+  isConfirmedForOfficialStats?: boolean; // Apenas questões confirmadas entram na incidência oficial
 }
 
 export interface ExamSubmission {

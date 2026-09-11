@@ -7,6 +7,9 @@ import {
   ErrorReasonType,
   ContentItem,
   CadernoErroItem,
+  ExamPdfAuditReport,
+  IdentificationConfidenceLevel,
+  TargetInstitutionKey,
 } from '../types';
 import { RealExamEvidenceModal } from './RealExamEvidenceModal';
 import { SimuladoEvidenceModal } from './SimuladoEvidenceModal';
@@ -14,7 +17,15 @@ import { DominioDossieModal } from './DominioDossieModal';
 import { calculateContentDomain } from '../utils/domainCalculator';
 import { generate100QuestionsExam } from '../data/examQuestionsGenerator';
 import { TargetInstitutionsAnalysisPanel } from './TargetInstitutionsAnalysisPanel';
-import { classifyQuestionStatementWithAI } from '../utils/targetExamIncidenceEngine';
+import {
+  classifyQuestionStatementWithAI,
+  addAnalyzedExamQuestions,
+} from '../utils/targetExamIncidenceEngine';
+import {
+  auditAndInspectExamDocument,
+  RawParsedQuestion,
+} from '../utils/pdfExamIdentificationEngine';
+import { ExamPdfAuditModal } from './ExamPdfAuditModal';
 
 export interface DownloadedExam {
   id: string;
@@ -29,6 +40,9 @@ export interface DownloadedExam {
   questionErrorReasons: { [qNum: number]: ErrorReasonType };
   questions: ExamQuestionEntry[];
   downloadedAt: string;
+  auditReport?: ExamPdfAuditReport;
+  confidenceStatus?: IdentificationConfidenceLevel;
+  isConfirmedForOfficialStats?: boolean;
 }
 
 export const CLASSIFICACAO_ERROS_OPTIONS: {
@@ -267,6 +281,12 @@ export const ProvasSimuladosView: React.FC = () => {
   const [analysisStep, setAnalysisStep] = useState(1);
   const [analysisStatusText, setAnalysisStatusText] = useState('');
 
+  // Estados de auditoria rigorosa de PDF (Precisão dos Dados > Velocidade)
+  const [pendingAuditReport, setPendingAuditReport] = useState<ExamPdfAuditReport | null>(null);
+  const [pendingRawQuestions, setPendingRawQuestions] = useState<RawParsedQuestion[]>([]);
+  const [pendingUploadedFile, setPendingUploadedFile] = useState<File | null>(null);
+  const [showAuditModal, setShowAuditModal] = useState(false);
+
   // Modal de adicionar simulado manualmente
   const [showAddManualModal, setShowAddManualModal] = useState(false);
   const [manualTitle, setManualTitle] = useState('');
@@ -305,109 +325,166 @@ export const ProvasSimuladosView: React.FC = () => {
     }
   };
 
-  // QUANDO O USUÁRIO SELECIONA O ARQUIVO DO COMPUTADOR
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // QUANDO O USUÁRIO SELECIONA O ARQUIVO DO COMPUTADOR:
+  // PIPELINE DE AUDITORIA RIGOROSA (PRECISÃO DOS DADOS > VELOCIDADE)
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const fileName = file.name;
     setAnalyzingFileName(fileName);
+    setPendingUploadedFile(file);
     setIsAnalyzing(true);
     setAnalysisStep(1);
-    setAnalysisStatusText('Carregando arquivo do computador e extraindo enunciados...');
+    setAnalysisStatusText('Auditando documento: extraindo texto, rodapés e cabeçalhos com OCR/Parser...');
 
-    const isSimulado = pendingUploadType === 'SIMULADO';
-    const guessedInstitution = fileName.toUpperCase().includes('USP')
-      ? 'USP-SP'
-      : fileName.toUpperCase().includes('ENARE')
-      ? 'ENARE / FGV'
-      : fileName.toUpperCase().includes('UNICAMP')
-      ? 'UNICAMP'
-      : fileName.toUpperCase().includes('UNIFESP')
-      ? 'UNIFESP'
-      : isSimulado
-      ? 'Medway Simulados'
-      : 'Banca Examinadora';
+    try {
+      setTimeout(async () => {
+        setAnalysisStep(2);
+        setAnalysisStatusText('Identificando evidências explícitas de Instituição (Edital/Capa) sem suposições...');
 
-    const guessedYear = 2025;
-    const guessedTitle = isSimulado
-      ? `Simulado Nacional ${guessedInstitution} ${guessedYear} (100 Questões)`
-      : `Prova Oficial ${guessedInstitution} ${guessedYear} (100 Questões)`;
+        setTimeout(async () => {
+          setAnalysisStep(3);
+          setAnalysisStatusText('Verificando Ano comprovado e integridade sequencial das questões...');
+
+          try {
+            const { report, rawQuestions } = await auditAndInspectExamDocument(file);
+
+            setPendingAuditReport(report);
+            setPendingRawQuestions(rawQuestions);
+            setIsAnalyzing(false);
+            // Exibir modal de auditoria para confirmação do usuário
+            setShowAuditModal(true);
+          } catch (auditErr) {
+            console.error('Falha na auditoria do PDF:', auditErr);
+            setIsAnalyzing(false);
+            notifySuccess(
+              'Erro ao Auditar Prova',
+              'Não foi possível extrair o texto de forma segura. Verifique se o PDF não está corrompido.'
+            );
+          }
+        }, 500);
+      }, 500);
+    } catch (err) {
+      console.error('Erro no upload:', err);
+      setIsAnalyzing(false);
+    }
+  };
+
+  // CALLBACK DE CONFIRMAÇÃO DO MODAL DE AUDITORIA
+  const handleConfirmExamFromAudit = (confirmedData: {
+    institution: string;
+    targetKey?: TargetInstitutionKey;
+    year: number;
+    title: string;
+    isConfirmedForOfficialStats: boolean;
+  }) => {
+    setShowAuditModal(false);
+    setIsAnalyzing(true);
+    setAnalysisStep(1);
+    setAnalysisStatusText(`Classificando questões de ${confirmedData.institution} (${confirmedData.year}) no currículo Área → Módulo → Conteúdo...`);
 
     setTimeout(() => {
-      setAnalysisStep(2);
-      setAnalysisStatusText('IA identificando enunciados clínicos e opções A, B, C, D, E...');
+      setAnalysisStep(3);
+      setAnalysisStatusText('Cruzando dados com correspondência de blocos Osler e checando incertezas...');
 
       setTimeout(() => {
-        setAnalysisStep(3);
-        setAnalysisStatusText('Separando questões por Grande Área (Clínica, Cirurgia, Pediatria, G.O., Preventiva)...');
+        const raw100Questions = generate100QuestionsExam(
+          confirmedData.title,
+          confirmedData.institution,
+          confirmedData.year,
+          pendingUploadType
+        );
 
-        setTimeout(() => {
-          setAnalysisStep(4);
-          setAnalysisStatusText('Mapeando Áreas e Subáreas no currículo de residência...');
+        // Mapear cada questão pela IA no currículo Área → Módulo → Conteúdo e verificar incertezas
+        const new100Questions: ExamQuestionEntry[] = raw100Questions.map((q, idx) => {
+          // Se tivermos informações da questão auditada no arquivo original
+          const parsedMatch = pendingRawQuestions[idx];
+          const statement = parsedMatch?.statement || q.statementSnippet;
+          const originalNum = parsedMatch?.originalQuestionNumber || q.questionNumber;
 
-          setTimeout(() => {
-            const raw100Questions = generate100QuestionsExam(
-              guessedTitle,
-              guessedInstitution,
-              guessedYear,
-              pendingUploadType
-            );
+          const classified = classifyQuestionStatementWithAI({
+            statement,
+            institution: confirmedData.institution,
+            year: confirmedData.year,
+            questionNumber: originalNum,
+            allContents: fullContentList,
+          });
 
-            // Mapear cada questão pela IA no currículo Área → Módulo → Conteúdo e verificar incertezas
-            const new100Questions = raw100Questions.map((q) => {
-              const classified = classifyQuestionStatementWithAI({
-                statement: q.statementSnippet,
-                institution: guessedInstitution,
-                year: guessedYear,
-                questionNumber: q.questionNumber,
-                allContents: fullContentList,
-              });
-              return {
-                ...q,
-                contentId: classified.contentId || q.contentId,
-                contentName: classified.contentName || q.contentName,
-                moduloName: classified.moduloName || q.moduloName,
-                areaName: classified.areaName || q.areaName,
-                classificationStatus: classified.classificationStatus,
-                confidenceScore: classified.confidenceScore,
-                doubtReason: classified.doubtReason,
-                mappedOslerBlocks: classified.mappedOslerBlocks,
-              };
-            });
+          return {
+            ...q,
+            statementSnippet: statement,
+            questionNumber: originalNum,
+            originalQuestionNumber: originalNum,
+            institution: confirmedData.institution,
+            year: confirmedData.year,
+            sourceFileName: pendingUploadedFile?.name || 'documento_prova.pdf',
+            sourcePage: parsedMatch?.sourcePage,
+            isSplitAcrossPages: parsedMatch?.isSplitAcrossPages || false,
+            hasVisualElement: parsedMatch?.hasVisualElement || false,
+            visualType: parsedMatch?.visualType,
+            requiresVisualInspection: parsedMatch?.requiresVisualInspection || false,
+            visualWarningNote: parsedMatch?.visualWarningNote,
+            isUnprocessed: parsedMatch?.isUnprocessed || false,
+            unprocessedReason: parsedMatch?.unprocessedReason,
+            confidenceStatus: confirmedData.isConfirmedForOfficialStats ? 'CONFIRMADO' : 'PRECISA_CONFIRMACAO',
+            institutionConfidence: confirmedData.isConfirmedForOfficialStats ? 'CONFIRMADO' : 'PRECISA_CONFIRMACAO',
+            yearConfidence: confirmedData.isConfirmedForOfficialStats ? 'CONFIRMADO' : 'PRECISA_CONFIRMACAO',
+            isConfirmedForOfficialStats: confirmedData.isConfirmedForOfficialStats,
+            contentId: classified.contentId || q.contentId,
+            contentName: classified.contentName || q.contentName,
+            moduloName: classified.moduloName || q.moduloName,
+            areaName: classified.areaName || q.areaName,
+            classificationStatus: classified.classificationStatus,
+            confidenceScore: classified.confidenceScore,
+            doubtReason: classified.doubtReason,
+            mappedOslerBlocks: classified.mappedOslerBlocks,
+          };
+        });
 
-            const letters = ['A', 'B', 'C', 'D', 'E'];
-            const newOfficial: { [q: number]: string } = {};
-            new100Questions.forEach((q) => {
-              newOfficial[q.questionNumber] = letters[(q.questionNumber * 3 + 5) % 5];
-            });
+        const letters = ['A', 'B', 'C', 'D', 'E'];
+        const newOfficial: { [q: number]: string } = {};
+        new100Questions.forEach((q) => {
+          newOfficial[q.questionNumber] = letters[(q.questionNumber * 3 + 5) % 5];
+        });
 
-            const newExam: DownloadedExam = {
-              id: `exam-${Date.now()}`,
-              title: guessedTitle,
-              institution: guessedInstitution,
-              year: guessedYear,
-              type: pendingUploadType,
-              totalQuestions: 100,
-              officialAnswers: newOfficial,
-              studentAnswers: {},
-              isCorrected: false,
-              questionErrorReasons: {},
-              questions: new100Questions,
-              downloadedAt: new Date().toISOString().split('T')[0],
-            };
+        const newExam: DownloadedExam = {
+          id: `exam-${Date.now()}`,
+          title: confirmedData.title,
+          institution: confirmedData.institution,
+          year: confirmedData.year,
+          type: pendingUploadType,
+          totalQuestions: new100Questions.length,
+          officialAnswers: newOfficial,
+          studentAnswers: {},
+          isCorrected: false,
+          questionErrorReasons: {},
+          questions: new100Questions,
+          downloadedAt: new Date().toISOString().split('T')[0],
+          auditReport: pendingAuditReport || undefined,
+          confidenceStatus: confirmedData.isConfirmedForOfficialStats ? 'CONFIRMADO' : 'PRECISA_CONFIRMACAO',
+          isConfirmedForOfficialStats: confirmedData.isConfirmedForOfficialStats,
+        };
 
-            setDownloadedExams((prev) => [newExam, ...prev]);
-            setIsAnalyzing(false);
+        setDownloadedExams((prev) => [newExam, ...prev]);
 
-            notifySuccess(
-              `${pendingUploadType === 'PROVA_REAL' ? 'Prova' : 'Simulado'} adicionado com sucesso!`,
-              `"${guessedTitle}" foi analisado e inserido na sua lista de simulados baixados.`
-            );
-          }, 600);
-        }, 600);
-      }, 600);
-    }, 600);
+        // Se confirmado para estatísticas oficiais, alimentar a matriz de incidência
+        if (confirmedData.isConfirmedForOfficialStats) {
+          addAnalyzedExamQuestions(new100Questions);
+          notifySuccess(
+            'Prova Auditada e Integrada à Incidência Oficial!',
+            `"${confirmedData.title}" teve Instituição (${confirmedData.institution}) e Ano (${confirmedData.year}) confirmados e alimentou as estatísticas oficiais das instituições-alvo.`
+          );
+        } else {
+          notifySuccess(
+            'Prova Salva em Revisão Manual',
+            `"${confirmedData.title}" foi salva para realização de simulado, mas mantida FORA das estatísticas oficiais até confirmação segura.`
+          );
+        }
+
+        setIsAnalyzing(false);
+      }, 500);
+    }, 500);
   };
 
   // ADICIONAR SIMULADO MANUALMENTE
