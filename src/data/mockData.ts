@@ -21,7 +21,7 @@ export const initialPreferences: UserPreferences = {
   availableTodayMinutes: 90, // 1h30
   targetYearTimeline: '2 Anos',
   targetDeadlineDate: '2028-09-07',
-  targetInstitutions: ['USP-SP', 'UNIFESP', 'UNICAMP', 'ENARE', 'SUS-SP'],
+  targetInstitutions: ['USP-RP', 'USP-SP', 'UNICAMP', 'ENAMED', 'HIAE'],
   cycle: 'Ciclo Regular • 8h semanais',
 };
 

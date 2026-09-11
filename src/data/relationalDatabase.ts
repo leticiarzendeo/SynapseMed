@@ -133,13 +133,13 @@ export class SynapseRelationalDatabase {
       planningMode: 'semiautomatico',
     });
 
-    // 2. Instituições
+    // 2. Instituições-Alvo da Usuária (USP-RP, USP-SP, UNICAMP, ENAMED, HIAE)
     this.institutions = [
-      { id: 'inst-usp', name: 'USP-SP', state: 'SP', active: true },
-      { id: 'inst-unifesp', name: 'UNIFESP', state: 'SP', active: true },
+      { id: 'inst-usp-rp', name: 'USP-RP', state: 'SP', active: true },
+      { id: 'inst-usp-sp', name: 'USP-SP', state: 'SP', active: true },
       { id: 'inst-unicamp', name: 'UNICAMP', state: 'SP', active: true },
-      { id: 'inst-enare', name: 'ENARE', state: 'BR', active: true },
-      { id: 'inst-sussp', name: 'SUS-SP', state: 'SP', active: true },
+      { id: 'inst-enamed', name: 'ENAMED', state: 'BR', active: true },
+      { id: 'inst-hiae', name: 'HIAE', state: 'SP', active: true },
     ];
 
     this.userTargetInstitutions = this.institutions.map((i) => ({

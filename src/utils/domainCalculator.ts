@@ -498,16 +498,19 @@ function buildBrain2PrioritizationFromMetrics(params: {
   // 1. INCIDÊNCIA: BANCA GERAL VS INSTITUIÇÕES-ALVO (0-100 contínuo)
   const targetInstitutionsList = ['USP-SP', 'UNIFESP', 'UNICAMP', 'ENARE', 'SUS-SP'];
   
-  // Incidência nas instituições-alvo (0-100)
+  // Incidência nas 5 instituições-alvo da usuária (USP-RP, USP-SP, UNICAMP, ENAMED, HIAE) (0-100)
   let targetInstitutionsIncidenceScore = 70;
   if (typeof content.incidence?.calculatedPriorityScore === 'number') {
     targetInstitutionsIncidenceScore = content.incidence.calculatedPriorityScore;
+  } else if (content.incidence?.targetStats) {
+    targetInstitutionsIncidenceScore = content.incidence.targetStats.calculatedPriorityScore;
   } else if (content.incidence) {
-    const usp = content.incidence.usp || 5;
-    const unifesp = content.incidence.unifesp || 5;
-    const enare = content.incidence.enare || 5;
-    const unicamp = content.incidence.unicamp || 5;
-    targetInstitutionsIncidenceScore = Math.round(((usp + unifesp + enare + unicamp) / 40) * 100);
+    const usprp = content.incidence.usprp ?? content.incidence.usp ?? 5;
+    const uspsp = content.incidence.uspsp ?? content.incidence.usp ?? 5;
+    const unicamp = content.incidence.unicamp ?? 5;
+    const enamed = content.incidence.enamed ?? content.incidence.enare ?? 5;
+    const hiae = content.incidence.hiae ?? 5;
+    targetInstitutionsIncidenceScore = Math.round(((usprp + uspsp + unicamp + enamed + hiae) / 50) * 100);
   }
 
   // Incidência geral das provas dos últimos 5 anos (0-100)

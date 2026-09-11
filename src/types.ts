@@ -111,18 +111,55 @@ export interface FSRSMemoryState {
   state: 'novo' | 'aprendendo' | 'revisando' | 'reaprendendo';
 }
 
+export type TargetInstitutionKey = 'USP-RP' | 'USP-SP' | 'UNICAMP' | 'ENAMED' | 'HIAE';
+
+export type IncidenceFrequencyTier =
+  | 'muito_frequente'
+  | 'frequente'
+  | 'moderada'
+  | 'pouco_frequente'
+  | 'raro';
+
+export interface InstitutionFrequencyDetail {
+  institution: TargetInstitutionKey;
+  questionCount: number;
+  rating: 'Muito alta' | 'Alta' | 'Média' | 'Baixa' | 'Rara';
+  percentage: number;
+}
+
+export interface ContentTargetIncidenceStats {
+  contentId: string;
+  totalQuestions: number;
+  institutions: TargetInstitutionKey[];
+  years: number[];
+  byInstitution: Record<TargetInstitutionKey, InstitutionFrequencyDetail>;
+  yearlyFrequency: Record<number, number>; // ex: { 2021: 2, 2022: 4, 2023: 5, 2024: 7, 2025: 8 }
+  recencyWeightedScore: number; // 0-100 ponderado por recência dos últimos 5 anos
+  trend: 'subindo' | 'estavel' | 'caindo';
+  trendLabel: string; // "↗️ Alta recente", "➡️ Estável", "↘️ Em queda"
+  frequencyTier: IncidenceFrequencyTier;
+  tierLabel: string; // 'Muito frequente' | 'Frequente' | 'Moderadamente frequente' | 'Pouco frequente' | 'Raro / Não identificado'
+  calculatedPriorityScore: number; // 0-100 para o cérebro de priorização
+}
+
 export interface ContentIncidenceBySchool {
-  usp: number; // número de questões nos últimos 5 anos
-  unifesp: number;
-  ufmg: number;
-  unicamp: number;
-  enare: number;
+  usp?: number; // número de questões nos últimos 5 anos
+  unifesp?: number;
+  ufmg?: number;
+  unicamp?: number;
+  enare?: number;
+  // 5 Instituições-Alvo prioritárias da usuária
+  usprp?: number;
+  uspsp?: number;
+  enamed?: number;
+  hiae?: number;
   generalRating: 'Muito alta' | 'Alta' | 'Média' | 'Baixa' | 'Muito baixa';
-  calculatedPriorityScore: number; // Calculado pelas bancas-alvo do aluno
+  calculatedPriorityScore: number; // Calculado pelas bancas-alvo da usuária
   totalAppearancesLast5Years?: number; // ex: 18 aparições
   totalExamsAnalyzed?: number; // ex: 25 provas analisadas
   incidenceRatePercent?: number; // ex: 72% de incidência histórica
   architectureRole?: string; // "Entra na Prioridade/Relevância, NÃO infla o Domínio"
+  targetStats?: ContentTargetIncidenceStats;
 }
 
 export interface RealExamQuestionRecord {
@@ -605,6 +642,20 @@ export interface ExamQuestionEntry {
   errorReason?: ErrorReasonType;
   userCorrectionNote?: string;
   aiSuggestedContentId: string;
+  // Campos de Inteligência Curricular e IA das Bancas-Alvo
+  institution?: string; // ex: 'USP-RP', 'USP-SP', 'UNICAMP', 'ENAMED', 'HIAE'
+  year?: number; // ex: 2021-2025
+  classificationStatus?: 'ia_confiavel' | 'duvida_revisao' | 'corrigido_manual';
+  confidenceScore?: number; // 0-100%
+  doubtReason?: string; // Motivo de dúvida (ex: sobreposição de condutas, sintomas mistos)
+  mappedOslerBlocks?: { id: string; title: string }[];
+  manualOverrideDate?: string;
+  originalAiSuggestion?: {
+    areaName: string;
+    moduloName: string;
+    contentName: string;
+    contentId: string;
+  };
 }
 
 export interface ExamSubmission {

@@ -1,6 +1,6 @@
 {
   "name": "SynapseMed - Residência OS",
-  "description": "Sistema operacional de estudos e priorização adaptativa para preparação de residência médica com foco em metas e alto rendimento.",
+  "description": "Sistema de estudos e priorização adaptativa com análise automática de provas dos últimos 5 anos (USP-RP, USP-SP, UNICAMP, ENAMED e HIAE) e matriz de incidência institucional.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

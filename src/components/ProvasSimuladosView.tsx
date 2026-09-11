@@ -13,6 +13,8 @@ import { SimuladoEvidenceModal } from './SimuladoEvidenceModal';
 import { DominioDossieModal } from './DominioDossieModal';
 import { calculateContentDomain } from '../utils/domainCalculator';
 import { generate100QuestionsExam } from '../data/examQuestionsGenerator';
+import { TargetInstitutionsAnalysisPanel } from './TargetInstitutionsAnalysisPanel';
+import { classifyQuestionStatementWithAI } from '../utils/targetExamIncidenceEngine';
 
 export interface DownloadedExam {
   id: string;
@@ -240,9 +242,10 @@ export const ProvasSimuladosView: React.FC = () => {
 
   // Modo de visualização:
   // 'lista' = página principal com as provas baixadas e informações principais
+  // 'instituicoes_alvo' = inteligência das 5 instituições-alvo (USP-RP, USP-SP, UNICAMP, ENAMED, HIAE) dos últimos 5 anos
   // 'questoes' = visualização detalhada das 100 questões da prova selecionada
   // 'evidencias' = evidências pedagógicas
-  const [viewMode, setViewMode] = useState<'lista' | 'questoes' | 'evidencias'>('lista');
+  const [viewMode, setViewMode] = useState<'lista' | 'instituicoes_alvo' | 'questoes' | 'evidencias'>('lista');
 
   // ID da prova atualmente selecionada para ver questões
   const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
@@ -344,12 +347,34 @@ export const ProvasSimuladosView: React.FC = () => {
           setAnalysisStatusText('Mapeando Áreas e Subáreas no currículo de residência...');
 
           setTimeout(() => {
-            const new100Questions = generate100QuestionsExam(
+            const raw100Questions = generate100QuestionsExam(
               guessedTitle,
               guessedInstitution,
               guessedYear,
               pendingUploadType
             );
+
+            // Mapear cada questão pela IA no currículo Área → Módulo → Conteúdo e verificar incertezas
+            const new100Questions = raw100Questions.map((q) => {
+              const classified = classifyQuestionStatementWithAI({
+                statement: q.statementSnippet,
+                institution: guessedInstitution,
+                year: guessedYear,
+                questionNumber: q.questionNumber,
+                allContents: fullContentList,
+              });
+              return {
+                ...q,
+                contentId: classified.contentId || q.contentId,
+                contentName: classified.contentName || q.contentName,
+                moduloName: classified.moduloName || q.moduloName,
+                areaName: classified.areaName || q.areaName,
+                classificationStatus: classified.classificationStatus,
+                confidenceScore: classified.confidenceScore,
+                doubtReason: classified.doubtReason,
+                mappedOslerBlocks: classified.mappedOslerBlocks,
+              };
+            });
 
             const letters = ['A', 'B', 'C', 'D', 'E'];
             const newOfficial: { [q: number]: string } = {};
@@ -394,12 +419,33 @@ export const ProvasSimuladosView: React.FC = () => {
       manualTitle.trim() ||
       `${manualType === 'SIMULADO' ? 'Simulado Nacional' : 'Prova Oficial'} ${manualInstitution.trim()} ${manualYear} (100 Questões)`;
 
-    const new100Questions = generate100QuestionsExam(
+    const raw100Questions = generate100QuestionsExam(
       title,
       manualInstitution.trim(),
       manualYear,
       manualType
     );
+
+    const new100Questions = raw100Questions.map((q) => {
+      const classified = classifyQuestionStatementWithAI({
+        statement: q.statementSnippet,
+        institution: manualInstitution.trim(),
+        year: manualYear,
+        questionNumber: q.questionNumber,
+        allContents: fullContentList,
+      });
+      return {
+        ...q,
+        contentId: classified.contentId || q.contentId,
+        contentName: classified.contentName || q.contentName,
+        moduloName: classified.moduloName || q.moduloName,
+        areaName: classified.areaName || q.areaName,
+        classificationStatus: classified.classificationStatus,
+        confidenceScore: classified.confidenceScore,
+        doubtReason: classified.doubtReason,
+        mappedOslerBlocks: classified.mappedOslerBlocks,
+      };
+    });
 
     const letters = ['A', 'B', 'C', 'D', 'E'];
     const newOfficial: { [q: number]: string } = {};
@@ -970,6 +1016,21 @@ export const ProvasSimuladosView: React.FC = () => {
             </span>
           </button>
 
+          <button
+            onClick={() => setViewMode('instituicoes_alvo')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              viewMode === 'instituicoes_alvo'
+                ? 'bg-primary text-on-primary shadow-xs'
+                : 'bg-surface-container-low text-secondary hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-sm">verified</span>
+            <span>Instituições-Alvo (5 Anos &amp; Incidência)</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-900 text-[0.625rem] font-bold">
+              5 Bancas
+            </span>
+          </button>
+
           {viewMode === 'questoes' && activeExam && (
             <button
               onClick={() => setViewMode('questoes')}
@@ -1477,11 +1538,30 @@ export const ProvasSimuladosView: React.FC = () => {
                         <span className="text-[0.625rem] text-secondary">
                           &rarr; {q.moduloName} &rarr; <strong>{q.contentName}</strong>
                         </span>
+
+                        {q.classificationStatus === 'duvida_revisao' && (
+                          <span className="px-2 py-0.2 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[0.625rem] font-bold flex items-center gap-0.5">
+                            <span className="material-symbols-outlined text-[0.6875rem]">help</span>
+                            <span>Dúvida IA</span>
+                          </span>
+                        )}
+                        {q.classificationStatus === 'ia_confiavel' && (
+                          <span className="px-2 py-0.2 rounded-full bg-emerald-100 text-emerald-900 text-[0.625rem] font-bold flex items-center gap-0.5">
+                            <span className="material-symbols-outlined text-[0.6875rem]">check_circle</span>
+                            <span>IA Confiável</span>
+                          </span>
+                        )}
                       </div>
 
                       <p className="text-xs text-on-surface font-medium line-clamp-2 leading-relaxed">
                         {q.statementSnippet}
                       </p>
+
+                      {q.doubtReason && (
+                        <div className="p-2 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 text-[0.6875rem]">
+                          <strong>Sinalização IA:</strong> {q.doubtReason}
+                        </div>
+                      )}
                     </div>
 
                     {/* Status de Correção */}
@@ -1585,6 +1665,15 @@ export const ProvasSimuladosView: React.FC = () => {
             })}
           </div>
         </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ABA INSTITUIÇÕES-ALVO (ÚLTIMOS 5 ANOS & INCIDÊNCIA CURRICULAR) */}
+      {/* ========================================================================= */}
+      {viewMode === 'instituicoes_alvo' && (
+        <TargetInstitutionsAnalysisPanel
+          onOpenCaderno={(examId) => handleOpenQuestions(examId)}
+        />
       )}
 
       {/* ========================================================================= */}
