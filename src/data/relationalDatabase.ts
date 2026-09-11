@@ -711,7 +711,7 @@ export class SynapseRelationalDatabase {
       weekEnd: '2026-09-11',
       availableMinutes: 480, // 8h capacidade regular
       plannedMinutes: 450, // 7h30 planejado pelo algoritmo
-      completedMinutes: 320, // 5h20 executado
+      completedMinutes: 0, // Início limpo de estudos (0 min executados)
       requiredPaceMinutes: 455, // 7h35 ritmo necessário para 2 anos
       projectedDeadline: 'Abril/2028',
       status: 'ON_TRACK',
@@ -1106,14 +1106,14 @@ export class SynapseRelationalDatabase {
    * Retorna os 4 conceitos fundamentais de tempo:
    * 1. Capacidade (ex: 8h)
    * 2. Tempo Planejado (ex: 7h30)
-   * 3. Tempo Realizado (ex: 5h20)
+   * 3. Tempo Realizado (início 0h, incrementado com sessões)
    * 4. Tempo Extraordinário (Simulados - FORA da capacidade regular de 8h!)
    */
   getFourTimesMetrics(): FourTimesMetrics {
     const plan = this.weeklyPlans[0];
     const capacityMinutes = plan?.availableMinutes || 480; // 8h
     const plannedMinutes = plan?.plannedMinutes || 450; // 7h30
-    const realizedMinutes = plan?.completedMinutes || 320; // 5h20
+    const realizedMinutes = plan?.completedMinutes ?? 0; // Início do zero (0 min)
 
     // Simulação realizada fora da carga regular (ex: Simulado Nacional 03 = 180 min / 3h)
     const extraordinarySimulationMinutes = 180;

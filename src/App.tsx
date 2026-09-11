@@ -20,13 +20,14 @@ export default function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Garantia de ambiente limpo para teste de início de estudos
-  const CURRENT_STORAGE_VERSION = 'v5_fresh_start';
+  const CURRENT_STORAGE_VERSION = 'v6_clean_zero_hours';
   if (typeof window !== 'undefined') {
     const storedVersion = localStorage.getItem('synapsemed_storage_version');
     if (storedVersion !== CURRENT_STORAGE_VERSION) {
       localStorage.removeItem('synapsemed_activities');
       localStorage.removeItem('synapsemed_prefs');
       localStorage.removeItem('synapsemed_caderno_erros');
+      localStorage.removeItem('synapsemed_weekly_completed_minutes');
       localStorage.setItem('synapsemed_storage_version', CURRENT_STORAGE_VERSION);
     }
   }
@@ -174,6 +175,7 @@ export default function App() {
       localStorage.removeItem('synapsemed_activities');
       localStorage.removeItem('synapsemed_prefs');
       localStorage.removeItem('synapsemed_caderno_erros');
+      localStorage.removeItem('synapsemed_weekly_completed_minutes');
       localStorage.setItem('synapsemed_storage_version', CURRENT_STORAGE_VERSION);
     }
     setActivities(initialActivities);

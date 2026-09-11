@@ -633,7 +633,7 @@ export const BancoRelacionalView: React.FC = () => {
                         {p.plannedMinutes} min (7h30)
                       </td>
                       <td className="p-3 font-code-metric text-emerald-700 font-bold">
-                        {p.completedMinutes} min (5h20)
+                        {p.completedMinutes} min ({Math.floor(p.completedMinutes / 60)}h{(p.completedMinutes % 60).toString().padStart(2, '0')})
                       </td>
                       <td className="p-3 font-code-metric text-secondary">{p.requiredPaceMinutes} min (7h35)</td>
                       <td className="p-3">

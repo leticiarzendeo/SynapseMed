@@ -302,9 +302,21 @@ export const HojeView: React.FC<HojeViewProps> = ({
     setExpandedDecisions((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // Daily totals
+  // Daily & Weekly totals
   const totalPlannedMinutes = activities.reduce((acc, a) => acc + a.durationMin, 0); // 90 min (1h30)
-  const [completedMinutes, setCompletedMinutes] = useState(0);
+  const [completedMinutes, setCompletedMinutes] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('synapsemed_weekly_completed_minutes');
+      if (saved) return parseInt(saved, 10) || 0;
+    }
+    return 0;
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('synapsemed_weekly_completed_minutes', completedMinutes.toString());
+    }
+  }, [completedMinutes]);
 
   // Timer effect
   useEffect(() => {
@@ -325,12 +337,15 @@ export const HojeView: React.FC<HojeViewProps> = ({
   const handleStartSession = (activity: ActivityItem) => {
     setActiveStudySession(activity);
     const isTheory = activity.subType.toLowerCase().includes('teoria');
-    setSessionTimerSeconds(isTheory ? 24 * 60 + 12 : 32 * 60 + 14); // 00:24:12 para teoria
+    setSessionTimerSeconds(0); // Cronômetro inicia do zero para registro real
     setIsTimerRunning(true);
-    setFinishExercisesDone(isTheory ? 5 : 12);
+    setFinishExercisesDone(0);
     setFinishExercisesTotal(isTheory ? 10 : 20);
-    setFinishCorrectAnswers(isTheory ? 4 : 9);
+    setFinishCorrectAnswers(0);
     setFinishTimeMinutes(activity.durationMin);
+    setFinishTheoryCompleted(false);
+    setSelectedErrorReasons([]);
+    setFinishNotes('');
   };
 
   const handleCompleteDirect = (activity: ActivityItem) => {
@@ -577,37 +592,58 @@ export const HojeView: React.FC<HojeViewProps> = ({
       </section>
 
       {/* 2. INDICADOR DA SEMANA & RITMO NECESSÁRIO */}
-      <section className="bg-surface-container-lowest rounded-2xl p-6 border border-surface-container shadow-xs space-y-4">
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-bold text-on-surface uppercase tracking-wider">Esta semana</span>
-          <span className="font-code-metric text-sm font-extrabold text-on-surface">
-            5h20 <span className="text-secondary font-normal">/ {preferences.weeklyHoursTarget}h00</span>
-          </span>
-        </div>
+      {(() => {
+        const weeklyTargetHours = preferences.weeklyHoursTarget || 8.0;
+        const weeklyTargetMin = Math.round(weeklyTargetHours * 60);
+        const completedHours = Math.floor(completedMinutes / 60);
+        const completedRemMin = completedMinutes % 60;
+        const completedHoursStr = `${completedHours}h${completedRemMin > 0 ? completedRemMin.toString().padStart(2, '0') : '00'}`;
+        const remainingMin = Math.max(0, weeklyTargetMin - completedMinutes);
+        const remainingHours = Math.floor(remainingMin / 60);
+        const remainingRemMin = remainingMin % 60;
+        const remainingStr = `${remainingHours}h${remainingRemMin > 0 ? remainingRemMin.toString().padStart(2, '0') : '00'}`;
+        const weeklyProgressPercent = Math.min(100, Math.round((completedMinutes / weeklyTargetMin) * 100));
 
-        {/* Barra de Progresso */}
-        <div className="w-full bg-surface-container h-3 rounded-full overflow-hidden p-0.5 border border-surface-container-high/40">
-          <div
-            className="bg-primary h-full rounded-full transition-all duration-500"
-            style={{ width: `${(5.33 / preferences.weeklyHoursTarget) * 100}%` }}
-          />
-        </div>
+        return (
+          <section className="bg-surface-container-lowest rounded-2xl p-6 border border-surface-container shadow-xs space-y-4">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-on-surface uppercase tracking-wider">Esta semana</span>
+              <span className="font-code-metric text-sm font-extrabold text-on-surface">
+                {completedHoursStr} <span className="text-secondary font-normal">/ {weeklyTargetHours}h00</span>
+              </span>
+            </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs border-t border-surface-container pt-3">
-          <span className="text-secondary">
-            Restam <strong className="text-on-surface font-semibold">2h40</strong> nesta semana.
-          </span>
+            {/* Barra de Progresso */}
+            <div className="w-full bg-surface-container h-3 rounded-full overflow-hidden p-0.5 border border-surface-container-high/40">
+              <div
+                className="bg-primary h-full rounded-full transition-all duration-500"
+                style={{ width: `${weeklyProgressPercent}%` }}
+              />
+            </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-secondary">Ritmo necessário:</span>
-            <span className="font-code-metric font-bold text-on-surface">7h35/semana</span>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[0.6875rem]">
-              <span>🟢</span>
-              <span>Você está no ritmo</span>
-            </span>
-          </div>
-        </div>
-      </section>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs border-t border-surface-container pt-3">
+              <span className="text-secondary">
+                {completedMinutes === 0 ? (
+                  <>Você está no <strong className="text-on-surface font-semibold">início da semana de estudos</strong> (restam {remainingStr} para a meta).</>
+                ) : remainingMin === 0 ? (
+                  <strong className="text-emerald-700 font-semibold">🎉 Meta de {weeklyTargetHours}h da semana atingida!</strong>
+                ) : (
+                  <>Restam <strong className="text-on-surface font-semibold">{remainingStr}</strong> nesta semana.</>
+                )}
+              </span>
+
+              <div className="flex items-center gap-2">
+                <span className="text-secondary">Ritmo necessário:</span>
+                <span className="font-code-metric font-bold text-on-surface">7h35/semana</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[0.6875rem]">
+                  <span>🟢</span>
+                  <span>Você está no ritmo</span>
+                </span>
+              </div>
+            </div>
+          </section>
+        );
+      })()}
 
       {/* 2.1 BANNER DE AUTONOMIA: USUÁRIA ALTEROU A RECOMENDAÇÃO */}
       {userOverrides.length > 0 && (
@@ -687,51 +723,6 @@ export const HojeView: React.FC<HojeViewProps> = ({
               {Math.floor(totalPlannedMinutes / 60)}h{totalPlannedMinutes % 60}min • {totalPlannedMinutes === availableTodayMin ? '100% da cota' : `${totalPlannedMinutes} min alocados`}
             </span>
           </div>
-        </div>
-
-        {/* Opção para teste: Iniciar a Teoria de DPOC para testar o quadro de estudo */}
-        <div className="p-3.5 rounded-2xl bg-surface-container-low border border-surface-container flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2.5">
-            <span className="material-symbols-outlined text-primary text-lg">school</span>
-            <div>
-              <span className="text-xs font-bold text-on-surface block">
-                Teoria: DPOC (Pneumologia • Medway)
-              </span>
-              <span className="text-[0.6875rem] text-secondary">
-                Videoaula (45 min) + Apostila GOLD • Inicie para visualizar o quadro de estudo ativo
-              </span>
-            </div>
-          </div>
-          <button
-            onClick={() =>
-              handleStartSession({
-                id: 'act-dpoc-teoria',
-                contentId: 'c-dpoc',
-                name: 'DPOC',
-                subType: 'Teoria Medway',
-                durationMin: 50,
-                specialty: 'Clínica Médica',
-                modulo: 'Pneumologia',
-                priority: 'alta',
-                priorityScore: 98,
-                whyNow: 'Base teórica para resolução de questões de alta incidência nas bancas USP e ENARE.',
-                whyDetails: {
-                  incidence: 'Incidência de 94/100 (USP: 10q, UNIFESP: 8q, ENARE: 9q)',
-                  examScore: 'Videoaula + Leitura de apoio',
-                  domainScore: 'Domínio teórico inicial: 72%',
-                  targetScore: 'Meta: ≥ 85%',
-                  fsrsStatus: 'Início de ciclo teórico',
-                  postExercisesCompleted: 'Pré-requisito para pós-exercícios',
-                },
-                recommendedDay: 'segunda',
-                currentDay: 'segunda',
-              })
-            }
-            className="px-3.5 py-2 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary-container transition-all flex items-center gap-1.5 shadow-xs self-start sm:self-auto shrink-0"
-          >
-            <span>▶</span>
-            <span>Iniciar</span>
-          </button>
         </div>
 
         {/* Lista de Atividades de Hoje com Drag & Drop / Reordenação */}
@@ -1149,10 +1140,10 @@ export const HojeView: React.FC<HojeViewProps> = ({
             </div>
             <div>
               <div className="font-code-metric text-sm font-bold text-on-surface">
-                1h30 planejadas • {completedMinutes > 0 ? `${completedMinutes} min realizadas` : 'Em andamento'}
+                {Math.floor(totalPlannedMinutes / 60)}h{totalPlannedMinutes % 60 ? `${totalPlannedMinutes % 60}min` : '00'} planejadas • {completedMinutes > 0 ? `${completedMinutes} min realizadas` : '0 min realizadas'}
               </div>
               <div className="text-xs text-secondary mt-0.5">
-                {completedMinutes >= 80 ? (
+                {completedMinutes >= totalPlannedMinutes && totalPlannedMinutes > 0 ? (
                   <span className="text-emerald-700 font-bold">🟢 Plano diário concluído com êxito</span>
                 ) : (
                   <span>
@@ -1187,28 +1178,49 @@ export const HojeView: React.FC<HojeViewProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="p-3.5 rounded-xl bg-surface-container-low/60 border border-surface-container">
-            <span className="text-[0.6875rem] text-secondary block">Conteúdos estudados</span>
-            <div className="font-code-metric text-lg font-bold text-on-surface mt-0.5">
-              124 <span className="text-xs text-secondary font-normal">/ 680 (18,2%)</span>
-            </div>
-          </div>
+        {(() => {
+          const allCurriculumContents = getAllCurriculumContents();
+          const totalCurriculumCount = allCurriculumContents.length;
+          const studiedContentsCount = allCurriculumContents.filter(
+            (c) => c.isStudied || c.status !== 'Não iniciado'
+          ).length;
+          const consolidatedCount = allCurriculumContents.filter(
+            (c) => c.isConsolidated || (c.estimatedMastery || 0) >= 85
+          ).length;
+          const studiedPercentStr =
+            totalCurriculumCount > 0
+              ? ((studiedContentsCount / totalCurriculumCount) * 100).toFixed(1)
+              : '0,0';
+          const consolidatedPercentStr =
+            totalCurriculumCount > 0
+              ? ((consolidatedCount / totalCurriculumCount) * 100).toFixed(1)
+              : '0,0';
 
-          <div className="p-3.5 rounded-xl bg-surface-container-low/60 border border-surface-container">
-            <span className="text-[0.6875rem] text-secondary block">Domínio ≥85% (Consolidados)</span>
-            <div className="font-code-metric text-lg font-bold text-emerald-700 mt-0.5">
-              58 <span className="text-xs text-secondary font-normal">/ 680 (8,5%)</span>
-            </div>
-          </div>
+          return (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-3.5 rounded-xl bg-surface-container-low/60 border border-surface-container">
+                <span className="text-[0.6875rem] text-secondary block">Conteúdos estudados</span>
+                <div className="font-code-metric text-lg font-bold text-on-surface mt-0.5">
+                  {studiedContentsCount} <span className="text-xs text-secondary font-normal">/ {totalCurriculumCount} ({studiedPercentStr}%)</span>
+                </div>
+              </div>
 
-          <div className="p-3.5 rounded-xl bg-surface-container-low/60 border border-surface-container">
-            <span className="text-[0.6875rem] text-secondary block">Revisões FSRS em dia</span>
-            <div className="font-code-metric text-lg font-bold text-primary mt-0.5">
-              82% <span className="text-xs text-secondary font-normal">(Retenção ativa)</span>
+              <div className="p-3.5 rounded-xl bg-surface-container-low/60 border border-surface-container">
+                <span className="text-[0.6875rem] text-secondary block">Domínio ≥85% (Consolidados)</span>
+                <div className="font-code-metric text-lg font-bold text-emerald-700 mt-0.5">
+                  {consolidatedCount} <span className="text-xs text-secondary font-normal">/ {totalCurriculumCount} ({consolidatedPercentStr}%)</span>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-surface-container-low/60 border border-surface-container">
+                <span className="text-[0.6875rem] text-secondary block">Revisões FSRS em dia</span>
+                <div className="font-code-metric text-lg font-bold text-primary mt-0.5">
+                  100% <span className="text-xs text-secondary font-normal">(Sem atrasos)</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          );
+        })()}
       </section>
 
       {/* MODAL: DETALHES DA ATIVIDADE & "POR QUE ESTOU FAZENDO ISSO?" */}
