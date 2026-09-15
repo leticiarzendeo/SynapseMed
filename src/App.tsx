@@ -357,7 +357,9 @@ export default function App() {
             />
           )}
 
-          {currentPath === 'desempenho' && <DesempenhoView cadernoErros={cadernoErros} />}
+          {currentPath === 'desempenho' && (
+            <DesempenhoView cadernoErros={cadernoErros} curriculum={studiedCurriculum} />
+          )}
 
           {currentPath === 'revisoes' && (
             <RevisoesView onOpenSRSCoordination={handleStartSRSQueue} />

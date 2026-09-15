@@ -1,18 +1,29 @@
 import React, { useState } from 'react';
-import { curriculumAreas, fullCurriculumHierarchy } from '../data/mockData';
-import { CadernoErroItem, ContentItem } from '../types';
+import { fullCurriculumHierarchy } from '../data/mockData';
+import { AreaItem, CadernoErroItem, ContentItem } from '../types';
 import { calculateContentDomain } from '../utils/domainCalculator';
+import { computeDesempenhoMetrics, formatKpi } from '../utils/performanceMetrics';
 import { DominioDossieModal } from './DominioDossieModal';
 
 interface DesempenhoViewProps {
   cadernoErros?: CadernoErroItem[];
+  /** Currículo com progresso real (isStudied). Cai no estático se ausente. */
+  curriculum?: AreaItem[];
 }
 
-export const DesempenhoView: React.FC<DesempenhoViewProps> = ({ cadernoErros = [] }) => {
+export const DesempenhoView: React.FC<DesempenhoViewProps> = ({
+  cadernoErros = [],
+  curriculum,
+}) => {
   const [selectedModalContent, setSelectedModalContent] = useState<ContentItem | null>(null);
 
+  const curriculumHierarchy: AreaItem[] = curriculum ?? fullCurriculumHierarchy;
+
+  // Métricas honestas: número real quando há evidência, "—" quando não há.
+  const metrics = computeDesempenhoMetrics(curriculumHierarchy, cadernoErros.length);
+
   // Lista plana de conteúdos para amostragem do cérebro
-  const keyContents: ContentItem[] = fullCurriculumHierarchy.flatMap((area) =>
+  const keyContents: ContentItem[] = curriculumHierarchy.flatMap((area) =>
     area.modules.flatMap((mod) => mod.contents)
   ).slice(0, 6); // Amostra de temas de alta incidência
 
@@ -37,7 +48,7 @@ export const DesempenhoView: React.FC<DesempenhoViewProps> = ({ cadernoErros = [
 
         <div className="flex items-center gap-2">
           <span className="px-3 py-1 rounded-lg bg-emerald-50 text-emerald-800 font-code-metric text-xs font-bold border border-emerald-200">
-            Acurácia Geral: 78,4%
+            Acurácia Geral: {formatKpi(metrics.overallAccuracy.value)}
           </span>
         </div>
       </div>
@@ -49,8 +60,12 @@ export const DesempenhoView: React.FC<DesempenhoViewProps> = ({ cadernoErros = [
             <span className="text-secondary text-xs uppercase font-semibold">📚 Conhecimento</span>
             <span className="text-[0.625rem] px-1.5 py-0.2 rounded bg-blue-100 text-blue-800 font-bold">Medway</span>
           </div>
-          <div className="font-code-metric text-2xl font-bold text-on-surface">88,0%</div>
-          <div className="text-xs text-blue-700">Pós-exercícios e revisões</div>
+          <div className="font-code-metric text-2xl font-bold text-on-surface">{formatKpi(metrics.knowledge.value)}</div>
+          <div className="text-xs text-blue-700">
+            {metrics.knowledge.value === null
+              ? 'Sem dados ainda — faça exercícios Medway'
+              : `Pós-exercícios e revisões (${metrics.knowledge.evidenceCount} questões)`}
+          </div>
         </div>
 
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-surface-container shadow-xs space-y-1 ring-1 ring-amber-400/40">
@@ -58,8 +73,12 @@ export const DesempenhoView: React.FC<DesempenhoViewProps> = ({ cadernoErros = [
             <span className="text-secondary text-xs uppercase font-semibold">🎯 Aplicação em Prova</span>
             <span className="text-[0.625rem] px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 font-bold">Gargalo</span>
           </div>
-          <div className="font-code-metric text-2xl font-bold text-amber-700">64,0%</div>
-          <div className="text-xs text-amber-800">Provas Reais (67,5%) &bull; Simulados (60,5%)</div>
+          <div className="font-code-metric text-2xl font-bold text-amber-700">{formatKpi(metrics.application.value)}</div>
+          <div className="text-xs text-amber-800">
+            {metrics.application.value === null
+              ? 'Sem dados ainda — registre provas e simulados'
+              : `Provas reais e simulados (${metrics.application.evidenceCount} questões)`}
+          </div>
         </div>
 
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-surface-container shadow-xs space-y-1">
@@ -67,17 +86,25 @@ export const DesempenhoView: React.FC<DesempenhoViewProps> = ({ cadernoErros = [
             <span className="text-secondary text-xs uppercase font-semibold">🧠 Retenção FSRS</span>
             <span className="text-[0.625rem] px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 font-bold">Osler</span>
           </div>
-          <div className="font-code-metric text-2xl font-bold text-purple-800">89,2%</div>
-          <div className="text-xs text-emerald-700">Estabilidade média: 21,4 dias</div>
+          <div className="font-code-metric text-2xl font-bold text-purple-800">{formatKpi(metrics.retention.value)}</div>
+          <div className="text-xs text-emerald-700">
+            {metrics.retention.value === null
+              ? 'Sem dados ainda — revise cartões Osler'
+              : `Cartões Osler revisados: ${metrics.retention.evidenceCount}`}
+          </div>
         </div>
 
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-surface-container shadow-xs space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-secondary text-xs uppercase font-semibold">📊 Confiança Amostral</span>
-            <span className="text-[0.625rem] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 font-bold">Alta</span>
+            <span className="text-[0.625rem] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 font-bold">{metrics.confidence.label}</span>
           </div>
-          <div className="font-code-metric text-2xl font-bold text-emerald-700">82%</div>
-          <div className="text-xs text-secondary">1.482 questões + 620 cartões</div>
+          <div className="font-code-metric text-2xl font-bold text-emerald-700">{formatKpi(metrics.confidence.value)}</div>
+          <div className="text-xs text-secondary">
+            {metrics.confidence.totalQuestions + metrics.confidence.totalCards === 0
+              ? 'Sem evidências registradas ainda'
+              : `${metrics.confidence.totalQuestions} questões + ${metrics.confidence.totalCards} cartões`}
+          </div>
         </div>
       </div>
 
@@ -184,18 +211,20 @@ export const DesempenhoView: React.FC<DesempenhoViewProps> = ({ cadernoErros = [
           Rendimento por Grande Área da Residência
         </h2>
         <div className="space-y-3">
-          {curriculumAreas.map((area) => (
+          {metrics.areas.map((area) => (
             <div key={area.id} className="space-y-1">
               <div className="flex justify-between items-center text-xs">
                 <span className="font-semibold text-on-surface">{area.name}</span>
                 <span className="font-code-metric font-bold text-primary">
-                  {area.masteryPercent}% de acerto
+                  {area.mastery === null
+                    ? 'sem dados'
+                    : `${formatKpi(area.mastery)} de domínio`}
                 </span>
               </div>
               <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
                 <div
                   className="bg-primary h-full rounded-full transition-all duration-500"
-                  style={{ width: `${area.masteryPercent}%` }}
+                  style={{ width: `${area.mastery ?? 0}%` }}
                 ></div>
               </div>
             </div>
@@ -210,7 +239,7 @@ export const DesempenhoView: React.FC<DesempenhoViewProps> = ({ cadernoErros = [
             <span className="material-symbols-outlined text-amber-600 text-lg">error_outline</span>
             Caderno de Erros Recorrentes
           </h2>
-          <span className="text-xs text-secondary">18 temas mapeados</span>
+          <span className="text-xs text-secondary">{metrics.mappedErrorTopics} temas mapeados</span>
         </div>
         <p className="text-xs text-secondary">
           Questões que você errou mais de uma vez ou marcou para revisão de raciocínio clínico:
@@ -230,18 +259,12 @@ export const DesempenhoView: React.FC<DesempenhoViewProps> = ({ cadernoErros = [
               <p className="text-secondary">{err.reason}</p>
             </div>
           ))}
-          <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/60 text-amber-900">
-            <strong>ICC — Stevenson B vs C:</strong> Confusão em pacientes limítrofes com PAS 90 mmHg.
-          </div>
-          <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/60 text-amber-900">
-            <strong>DPOC — Indicações de ODP:</strong> Dúvida no valor do hematócrito (&gt; 55%).
-          </div>
-          <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/60 text-amber-900">
-            <strong>Hérnias Inguinais:</strong> Triângulo de Hesselbach (hérnia direta vs indireta).
-          </div>
-          <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/60 text-amber-900">
-            <strong>Medicina Preventiva:</strong> Cálculo de Risco Relativo vs Odds Ratio em estudo caso-controle.
-          </div>
+          {cadernoErros.length === 0 && (
+            <div className="col-span-full p-4 rounded-xl bg-surface-container-low/60 border border-surface-container text-secondary text-center">
+              Nenhum erro registrado ainda. Ao concluir atividades e registrar
+              questões erradas, seus temas recorrentes aparecerão aqui.
+            </div>
+          )}
         </div>
       </div>
 
