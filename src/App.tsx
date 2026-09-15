@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ViewPath, StudyActivity, UserPreferences, SessionCompletionReport, CadernoErroItem } from './types';
+import { ViewPath, StudyActivity, UserPreferences, SessionCompletionReport, CadernoErroItem, EvidenceRecord } from './types';
 import { initialActivities, initialPreferences, initialCadernoErros, fullCurriculumHierarchy } from './data/mockData';
 import { buildStudiedCurriculum } from './utils/studiedProgress';
 import { Sidebar } from './components/Sidebar';
@@ -85,6 +85,21 @@ export default function App() {
     return [];
   });
 
+  // Evidência REAL registrada manualmente (acertos/erros/cartões por sessão).
+  // Alimenta os KPIs honestos do Desempenho.
+  const [evidenceLog, setEvidenceLog] = useState<EvidenceRecord[]>(() => {
+    const saved = localStorage.getItem('synapsemed_evidence_log');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
   // Modal controls
   const [coordinatingActivity, setCoordinatingActivity] = useState<StudyActivity | null>(null);
   const [showRegistrarModal, setShowRegistrarModal] = useState(false);
@@ -109,6 +124,10 @@ export default function App() {
       JSON.stringify(manualStudiedContentIds)
     );
   }, [manualStudiedContentIds]);
+
+  useEffect(() => {
+    localStorage.setItem('synapsemed_evidence_log', JSON.stringify(evidenceLog));
+  }, [evidenceLog]);
 
   // A PONTE: telas com modelo próprio chamam isto ao concluir uma atividade,
   // passando apenas o contentId. Assim a conclusão propaga para o currículo,
@@ -166,6 +185,14 @@ export default function App() {
   };
 
   const handleSaveCoordinationCompletion = (report: SessionCompletionReport) => {
+    // Resolve o conteúdo a partir da atividade coordenada (o report não
+    // carrega contentId, mas a StudyActivity sim).
+    const relatedActivity =
+      coordinatingActivity && coordinatingActivity.id === report.activityId
+        ? coordinatingActivity
+        : activities.find((a) => a.id === report.activityId);
+    const contentId = relatedActivity?.contentId;
+
     // 1. Mark target activity completed
     setActivities((prev) =>
       prev.map((act) =>
@@ -178,6 +205,30 @@ export default function App() {
           : act
       )
     );
+
+    // 1b. Propaga a conclusão para o currículo (destrava isStudied).
+    if (contentId) handleContentStudied(contentId);
+
+    // 1c. Registra a EVIDÊNCIA REAL da sessão (acertos/erros/cartões), que
+    // alimenta os KPIs honestos do Desempenho. Sem isso, os números somem.
+    if (
+      contentId &&
+      (report.questionsTotal || report.cardsReviewed)
+    ) {
+      const record: EvidenceRecord = {
+        id: `ev-${Date.now()}`,
+        contentId,
+        date: new Date().toISOString().split('T')[0],
+        kind: report.type,
+        questionsTotal: report.questionsTotal,
+        questionsCorrect: report.questionsCorrect,
+        cardsReviewed: report.cardsReviewed,
+        retentionPercent: report.retentionPercent,
+        durationMinutes: report.durationMinutes,
+        source: report.toolUsed,
+      };
+      setEvidenceLog((prev) => [record, ...prev]);
+    }
 
     // 2. Add logged hours to weekly total
     const addedHours = report.durationMinutes / 60;
@@ -240,6 +291,7 @@ export default function App() {
       localStorage.removeItem('synapsemed_prefs');
       localStorage.removeItem('synapsemed_caderno_erros');
       localStorage.removeItem('synapsemed_manual_studied');
+      localStorage.removeItem('synapsemed_evidence_log');
       localStorage.removeItem('synapsemed_weekly_completed_minutes');
       localStorage.setItem('synapsemed_storage_version', CURRENT_STORAGE_VERSION);
     }
@@ -247,6 +299,7 @@ export default function App() {
     setPreferences(initialPreferences);
     setCadernoErros(initialCadernoErros);
     setManualStudiedContentIds([]);
+    setEvidenceLog([]);
     setCurrentPath('hoje');
     showToast('Ambiente restaurado para o início dos estudos (0% concluído).');
   };
@@ -358,7 +411,11 @@ export default function App() {
           )}
 
           {currentPath === 'desempenho' && (
-            <DesempenhoView cadernoErros={cadernoErros} curriculum={studiedCurriculum} />
+            <DesempenhoView
+              cadernoErros={cadernoErros}
+              curriculum={studiedCurriculum}
+              evidenceLog={evidenceLog}
+            />
           )}
 
           {currentPath === 'revisoes' && (
