@@ -683,6 +683,27 @@ export interface SessionCompletionReport {
   effortLevel?: 'leve' | 'moderado' | 'desafiador';
 }
 
+/**
+ * Evidência real registrada MANUALMENTE pela usuária ao concluir uma sessão.
+ * É a fonte de verdade que alimenta os KPIs do Desempenho (acurácia,
+ * retenção, confiança) sem depender de IA nem de números fixos.
+ * Cada registro é atribuído a um contentId do currículo.
+ */
+export interface EvidenceRecord {
+  id: string;
+  contentId: string;
+  date: string; // YYYY-MM-DD
+  kind: 'questoes' | 'revisao' | 'avanco';
+  // Dimensão Aplicação/Conhecimento (questões)
+  questionsTotal?: number;
+  questionsCorrect?: number;
+  // Dimensão Retenção (cartões Osler)
+  cardsReviewed?: number;
+  retentionPercent?: number;
+  durationMinutes: number;
+  source: string; // ferramenta/contexto (report.toolUsed)
+}
+
 export interface WeeklyCapacityPlan {
   weekNumber: number;
   label: string;
