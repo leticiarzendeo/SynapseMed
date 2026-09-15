@@ -1,11 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import {
   fullCurriculumHierarchy,
-  getCurriculumTotals,
   initialOslerBlocks,
   initialSourceMappings,
 } from '../data/mockData';
-import { ContentItem, OslerBlock, SourceMapping, QuestionAssessment } from '../types';
+import { getStudiedCurriculumTotals } from '../utils/studiedProgress';
+import {
+  AreaItem,
+  ContentItem,
+  OslerBlock,
+  SourceMapping,
+  QuestionAssessment,
+  StudyActivity,
+  CadernoErroItem,
+} from '../types';
 import { MapeamentoFontesModal } from './MapeamentoFontesModal';
 import { MedwayTrajetoriaModal } from './MedwayTrajetoriaModal';
 import { OslerEvidenceModal } from './OslerEvidenceModal';
@@ -18,9 +26,26 @@ import { BancoRelacionalView } from './BancoRelacionalView';
 
 interface CurriculoViewProps {
   onStartTopic: (topicTitle: string) => void;
+  /**
+   * Currículo já sobreposto com o progresso real (isStudied refletindo as
+   * atividades concluídas). Opcional: se ausente, cai no currículo estático,
+   * preservando o comportamento antigo de qualquer chamador legado.
+   */
+  curriculum?: AreaItem[];
+  studiedContentIds?: ReadonlySet<string>;
+  activities?: StudyActivity[];
+  cadernoErros?: CadernoErroItem[];
 }
 
-export const CurriculoView: React.FC<CurriculoViewProps> = ({ onStartTopic }) => {
+export const CurriculoView: React.FC<CurriculoViewProps> = ({
+  onStartTopic,
+  curriculum,
+  studiedContentIds,
+  activities,
+  cadernoErros,
+}) => {
+  // Hierarquia efetiva: overlay real quando fornecido, senão o estático.
+  const curriculumHierarchy: AreaItem[] = curriculum ?? fullCurriculumHierarchy;
   const [activeTab, setActiveTab] = useState<'arvore' | 'mapeamento' | 'banco-relacional'>('arvore');
   const [selectedAreaId, setSelectedAreaId] = useState<string>('clinica');
   const [expandedContentId, setExpandedContentId] = useState<string | null>('c-icc');
@@ -323,7 +348,7 @@ export const CurriculoView: React.FC<CurriculoViewProps> = ({ onStartTopic }) =>
   // Lista plana de todos os conteúdos para fácil consulta
   const allContents = useMemo(() => {
     const list: ContentItem[] = [];
-    fullCurriculumHierarchy.forEach((area) => {
+    curriculumHierarchy.forEach((area) => {
       area.modules.forEach((mod) => {
         mod.contents.forEach((c) => {
           list.push(c);
@@ -331,11 +356,11 @@ export const CurriculoView: React.FC<CurriculoViewProps> = ({ onStartTopic }) =>
       });
     });
     return list;
-  }, []);
+  }, [curriculumHierarchy]);
 
-  const totals = getCurriculumTotals();
+  const totals = getStudiedCurriculumTotals(curriculumHierarchy);
   const activeArea =
-    fullCurriculumHierarchy.find((a) => a.id === selectedAreaId) || fullCurriculumHierarchy[0];
+    curriculumHierarchy.find((a) => a.id === selectedAreaId) || curriculumHierarchy[0];
 
   // Helper para obter métricas e blocos do Osler mapeados para um conteúdo
   const getContentOslerData = (contentId: string, contentItem?: ContentItem) => {
@@ -552,7 +577,7 @@ export const CurriculoView: React.FC<CurriculoViewProps> = ({ onStartTopic }) =>
 
           {/* Camada 1: Grandes Áreas da Residência Médica & Medway */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-            {fullCurriculumHierarchy.map((area) => {
+            {curriculumHierarchy.map((area) => {
               const isSelected = area.id === selectedAreaId;
               return (
                 <button

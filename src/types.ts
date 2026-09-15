@@ -626,6 +626,7 @@ export interface StudyActivity {
   summaryReason: string;
   description: string;
   status: 'pendente' | 'em_andamento' | 'concluido';
+  completedAt?: string; // YYYY-MM-DD — data da conclusão (alimenta lastStudiedDate no currículo)
   currentStep?: number;
   totalSteps?: number;
   remainingMinutes?: number;

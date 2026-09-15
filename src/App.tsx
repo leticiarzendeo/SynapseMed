@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ViewPath, StudyActivity, UserPreferences, SessionCompletionReport, CadernoErroItem } from './types';
-import { initialActivities, initialPreferences, initialCadernoErros } from './data/mockData';
+import { initialActivities, initialPreferences, initialCadernoErros, fullCurriculumHierarchy } from './data/mockData';
+import { buildStudiedCurriculum } from './utils/studiedProgress';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { HojeView } from './components/HojeView';
@@ -86,6 +87,19 @@ export default function App() {
     localStorage.setItem('synapsemed_caderno_erros', JSON.stringify(cadernoErros));
   }, [cadernoErros]);
 
+  // ============================================================
+  // FONTE DA VERDADE DO PROGRESSO CURRICULAR
+  // Sobrepõe ao currículo estático os conteúdos efetivamente
+  // concluídos (via contentId das atividades). É isto que
+  // "destrava" isStudied — antes preso em false para os 236
+  // conteúdos — e faz a conclusão propagar para Currículo,
+  // domainCalculator e priorização.
+  // ============================================================
+  const { curriculum: studiedCurriculum, studiedContentIds } = useMemo(
+    () => buildStudiedCurriculum(fullCurriculumHierarchy, activities),
+    [activities]
+  );
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3800);
@@ -96,7 +110,18 @@ export default function App() {
     newStatus: 'pendente' | 'em_andamento' | 'concluido'
   ) => {
     setActivities((prev) =>
-      prev.map((act) => (act.id === id ? { ...act, status: newStatus } : act))
+      prev.map((act) =>
+        act.id === id
+          ? {
+              ...act,
+              status: newStatus,
+              completedAt:
+                newStatus === 'concluido'
+                  ? new Date().toISOString().split('T')[0]
+                  : undefined,
+            }
+          : act
+      )
     );
     showToast(`Atividade atualizada para "${newStatus === 'concluido' ? 'Concluída' : newStatus}"`);
   };
@@ -111,7 +136,13 @@ export default function App() {
     // 1. Mark target activity completed
     setActivities((prev) =>
       prev.map((act) =>
-        act.id === report.activityId ? { ...act, status: 'concluido' } : act
+        act.id === report.activityId
+          ? {
+              ...act,
+              status: 'concluido',
+              completedAt: new Date().toISOString().split('T')[0],
+            }
+          : act
       )
     );
 
@@ -280,7 +311,13 @@ export default function App() {
           )}
 
           {currentPath === 'curriculo' && (
-            <CurriculoView onStartTopic={handleStartTopicFromCurriculo} />
+            <CurriculoView
+              onStartTopic={handleStartTopicFromCurriculo}
+              curriculum={studiedCurriculum}
+              studiedContentIds={studiedContentIds}
+              activities={activities}
+              cadernoErros={cadernoErros}
+            />
           )}
 
           {currentPath === 'desempenho' && <DesempenhoView cadernoErros={cadernoErros} />}
@@ -291,7 +328,7 @@ export default function App() {
 
           {currentPath === 'provas-e-simulados' && <ProvasSimuladosView />}
 
-          {currentPath === 'analises' && <AnalisesView />}
+          {currentPath === 'analises' && <AnalisesView cadernoErros={cadernoErros} />}
 
           {currentPath === 'configuracoes' && (
             <ConfiguracoesView
