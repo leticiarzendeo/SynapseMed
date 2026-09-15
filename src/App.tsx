@@ -7,6 +7,7 @@ import { Header } from './components/Header';
 import { HojeView } from './components/HojeView';
 import { PlanejamentoView } from './components/PlanejamentoView';
 import { CurriculoView } from './components/CurriculoView';
+import { PrioridadesView } from './components/PrioridadesView';
 import { DesempenhoView } from './components/DesempenhoView';
 import { RevisoesView } from './components/RevisoesView';
 import { ProvasSimuladosView } from './components/ProvasSimuladosView';
@@ -419,6 +420,10 @@ export default function App() {
               activities={activities}
               cadernoErros={cadernoErros}
             />
+          )}
+
+          {currentPath === 'prioridades' && (
+            <PrioridadesView curriculum={studiedCurriculum} />
           )}
 
           {currentPath === 'desempenho' && (
