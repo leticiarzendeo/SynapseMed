@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { fullCurriculumHierarchy } from '../data/mockData';
-import { AreaItem, CadernoErroItem, ContentItem } from '../types';
+import { AreaItem, CadernoErroItem, ContentItem, EvidenceRecord } from '../types';
 import { calculateContentDomain } from '../utils/domainCalculator';
 import { computeDesempenhoMetrics, formatKpi } from '../utils/performanceMetrics';
 import { DominioDossieModal } from './DominioDossieModal';
@@ -9,18 +9,21 @@ interface DesempenhoViewProps {
   cadernoErros?: CadernoErroItem[];
   /** Currículo com progresso real (isStudied). Cai no estático se ausente. */
   curriculum?: AreaItem[];
+  /** Evidência real registrada manualmente (acertos/erros/cartões). */
+  evidenceLog?: EvidenceRecord[];
 }
 
 export const DesempenhoView: React.FC<DesempenhoViewProps> = ({
   cadernoErros = [],
   curriculum,
+  evidenceLog = [],
 }) => {
   const [selectedModalContent, setSelectedModalContent] = useState<ContentItem | null>(null);
 
   const curriculumHierarchy: AreaItem[] = curriculum ?? fullCurriculumHierarchy;
 
   // Métricas honestas: número real quando há evidência, "—" quando não há.
-  const metrics = computeDesempenhoMetrics(curriculumHierarchy, cadernoErros.length);
+  const metrics = computeDesempenhoMetrics(curriculumHierarchy, evidenceLog, cadernoErros.length);
 
   // Lista plana de conteúdos para amostragem do cérebro
   const keyContents: ContentItem[] = curriculumHierarchy.flatMap((area) =>
@@ -218,7 +221,7 @@ export const DesempenhoView: React.FC<DesempenhoViewProps> = ({
                 <span className="font-code-metric font-bold text-primary">
                   {area.mastery === null
                     ? 'sem dados'
-                    : `${formatKpi(area.mastery)} de domínio`}
+                    : `${formatKpi(area.mastery)} de acerto`}
                 </span>
               </div>
               <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
