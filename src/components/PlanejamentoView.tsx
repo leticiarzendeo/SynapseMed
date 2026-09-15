@@ -20,11 +20,18 @@ import {
 interface PlanejamentoViewProps {
   preferences: UserPreferences;
   onOpenAjustarMetas?: () => void;
+  /**
+   * "A ponte": avisa o App (fonte da verdade) que o conteúdo de um contentId
+   * foi concluído, para propagar ao currículo/domínio/priorização sem migrar
+   * o modelo interno PlanningActivityItem.
+   */
+  onContentStudied?: (contentId?: string) => void;
 }
 
 export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
   preferences,
   onOpenAjustarMetas,
+  onContentStudied,
 }) => {
   // Mode: 🤖 Recomendação do Algoritmo vs 👤 Seu Plano
   const [viewLayer, setViewLayer] = useState<'algoritmo' | 'usuario'>('usuario');
@@ -130,6 +137,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
 
   // Marcar atividade como concluída
   const handleCompleteActivity = (actId: string) => {
+    const completed = activities.find((a) => a.id === actId);
     setActivities((prev) =>
       prev.map((a) => {
         if (a.id === actId) {
@@ -138,6 +146,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
         return a;
       })
     );
+    onContentStudied?.(completed?.contentId);
     showToast('✅ Atividade concluída! Relógio semanal atualizado e retenção FSRS calibrada.');
   };
 
