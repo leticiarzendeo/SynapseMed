@@ -139,6 +139,17 @@ export default function App() {
     );
   };
 
+  // Registro manual de prova/simulado: adiciona uma evidência avulsa e,
+  // se for erro, também marca o conteúdo como estudado (a questão prova contato).
+  const handleAddEvidence = (record: EvidenceRecord) => {
+    setEvidenceLog((prev) => [record, ...prev]);
+    if (record.contentId) handleContentStudied(record.contentId);
+  };
+
+  const handleAddCadernoErro = (item: CadernoErroItem) => {
+    setCadernoErros((prev) => [item, ...prev]);
+  };
+
   // ============================================================
   // FONTE DA VERDADE DO PROGRESSO CURRICULAR
   // Sobrepõe ao currículo estático os conteúdos efetivamente
@@ -422,7 +433,12 @@ export default function App() {
             <RevisoesView onOpenSRSCoordination={handleStartSRSQueue} />
           )}
 
-          {currentPath === 'provas-e-simulados' && <ProvasSimuladosView />}
+          {currentPath === 'provas-e-simulados' && (
+            <ProvasSimuladosView
+              onAddEvidence={handleAddEvidence}
+              onAddCadernoErro={handleAddCadernoErro}
+            />
+          )}
 
           {currentPath === 'analises' && <AnalisesView cadernoErros={cadernoErros} />}
 
