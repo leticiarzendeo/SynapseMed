@@ -41,12 +41,19 @@ interface HojeViewProps {
   preferences: UserPreferences;
   onNavigateToPlanejamento?: () => void;
   onNavigateToCurriculo?: () => void;
+  /**
+   * "A ponte": avisa o App (fonte da verdade) que o conteúdo de um contentId
+   * foi concluído, para propagar ao currículo/domínio/priorização sem migrar
+   * o modelo interno ActivityItem.
+   */
+  onContentStudied?: (contentId?: string) => void;
 }
 
 export const HojeView: React.FC<HojeViewProps> = ({
   preferences,
   onNavigateToPlanejamento,
   onNavigateToCurriculo,
+  onContentStudied,
 }) => {
   // Cota de disponibilidade diária (Padrão 100 min / 1h40 conforme especificação)
   const [availableTodayMin, setAvailableTodayMin] = useState<number>(100);
@@ -351,6 +358,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
   const handleCompleteDirect = (activity: ActivityItem) => {
     setCompletedMinutes((prev) => prev + activity.durationMin);
     setActivities((prev) => prev.filter((a) => a.id !== activity.id));
+    onContentStudied?.(activity.contentId);
     showToast(
       `✓ Atividade "${activity.name}" concluída! Domínio recalculado para 78% e FSRS reagendado.`
     );
@@ -370,6 +378,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
     if (!activeStudySession) return;
     setCompletedMinutes((prev) => prev + finishTimeMinutes);
     setActivities((prev) => prev.filter((a) => a.id !== activeStudySession.id));
+    onContentStudied?.(activeStudySession.contentId);
     setShowFinishModal(false);
     setActiveStudySession(null);
     showToast(
