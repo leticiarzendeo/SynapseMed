@@ -26,6 +26,8 @@ import {
   RawParsedQuestion,
 } from '../utils/pdfExamIdentificationEngine';
 import { ExamPdfAuditModal } from './ExamPdfAuditModal';
+import { RegistroManualProva } from './RegistroManualProva';
+import { EvidenceRecord } from '../types';
 
 export interface DownloadedExam {
   id: string;
@@ -229,7 +231,17 @@ function getInitialDownloadedExams(): DownloadedExam[] {
   return [enareExam, medwayExam, uspExam];
 }
 
-export const ProvasSimuladosView: React.FC = () => {
+interface ProvasSimuladosViewProps {
+  onAddEvidence?: (record: EvidenceRecord) => void;
+  onAddCadernoErro?: (item: CadernoErroItem) => void;
+}
+
+export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
+  onAddEvidence,
+  onAddCadernoErro,
+}) => {
+  // Painel de registro manual de prova/simulado (sem IA)
+  const [showManualRegistro, setShowManualRegistro] = useState(false);
   // Lista de simulados/provas baixados
   const [downloadedExams, setDownloadedExams] = useState<DownloadedExam[]>(() => {
     try {
@@ -838,6 +850,27 @@ export const ProvasSimuladosView: React.FC = () => {
           </p>
         </div>
 
+        <div className="flex items-start gap-2.5">
+          <button
+            onClick={() => setShowManualRegistro((v) => !v)}
+            className="px-4 py-2 rounded-lg bg-primary text-white font-medium text-sm whitespace-nowrap"
+          >
+            {showManualRegistro ? 'Fechar registro manual' : '+ Registrar prova (manual)'}
+          </button>
+        </div>
+      </div>
+
+      {showManualRegistro && (
+        <div className="p-4 sm:p-6 rounded-2xl border border-surface-container bg-surface-container-lowest">
+          <RegistroManualProva
+            onAddEvidence={(r) => onAddEvidence?.(r)}
+            onAddCadernoErro={(i) => onAddCadernoErro?.(i)}
+            onClose={() => setShowManualRegistro(false)}
+          />
+        </div>
+      )}
+
+      <div className="flex items-center justify-end">
         {/* FERRAMENTAS DE ADICIONAR SIMULADOS / PROVAS BAIXADAS */}
         <div className="flex items-center gap-2.5 flex-wrap">
           <button
