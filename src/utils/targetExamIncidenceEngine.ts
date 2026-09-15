@@ -12,6 +12,7 @@ import {
   TARGET_INSTITUTIONS_LIST,
 } from '../data/targetInstitutionsExamsData';
 import { getAllCurriculumContents } from '../data/mockData';
+import { isMedwayPriority } from './medwayPriorityEngine';
 
 // Chave do localStorage para persistir questões analisadas e correções manuais do usuário
 const STORAGE_KEY_QUESTIONS = 'synapsemed_target_exam_questions_v2';
@@ -1282,7 +1283,16 @@ export function calculateTargetInstitutionsIncidence(
   // Baseado no peso de recência e diversidade de instituições
   const diversityBonus = institutions.length >= 4 ? 12 : institutions.length >= 2 ? 6 : 0;
   const rawScore = weightedQuestionSum * 7.5 + diversityBonus;
-  const calculatedPriorityScore = Math.min(98, Math.max(15, Math.round(rawScore)));
+  let calculatedPriorityScore = Math.min(98, Math.max(15, Math.round(rawScore)));
+
+  // BOOST MEDWAY: se este conteúdo é foco PRIORITÁRIO da Medway (incidência
+  // histórica das instituições-alvo), ele entra com prioridade alta mesmo antes
+  // de você registrar provas próprias. Sem apagar o cálculo por evidência: o
+  // maior dos dois vale, então quando você acumular dados reais eles podem
+  // superar o piso Medway.
+  if (isMedwayPriority(contentId)) {
+    calculatedPriorityScore = Math.max(calculatedPriorityScore, 90);
+  }
 
   return {
     contentId,
