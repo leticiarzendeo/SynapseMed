@@ -19,8 +19,7 @@
 // aquela dimensão; caso contrário fica null.
 // ============================================================================
 
-import { AreaItem, ContentItem } from '../types';
-import { calculateContentDomain } from './domainCalculator';
+import { AreaItem, ContentItem, EvidenceRecord } from '../types';
 
 export interface KpiValue {
   /** Valor 0-100 quando há base real; null quando não há dados. */
@@ -32,27 +31,27 @@ export interface KpiValue {
 export interface AreaPerformance {
   id: string;
   name: string;
-  /** Média de domínio dos conteúdos estudados da área; null se nenhum estudado. */
+  /** Acurácia média das questões registradas na área; null se nenhuma. */
   mastery: number | null;
   studiedContents: number;
   totalContents: number;
 }
 
 export interface DesempenhoMetrics {
-  overallAccuracy: KpiValue;   // "Acurácia Geral"
-  knowledge: KpiValue;         // 📚 Conhecimento
-  application: KpiValue;       // 🎯 Aplicação em Prova
-  retention: KpiValue;         // 🧠 Retenção
+  overallAccuracy: KpiValue;   // "Acurácia Geral" (todas as questões registradas)
+  knowledge: KpiValue;         // 📚 Conhecimento (questões tipo 'avanco'/'questoes')
+  application: KpiValue;       // 🎯 Aplicação em Prova (questões tipo 'questoes')
+  retention: KpiValue;         // 🧠 Retenção (cartões Osler)
   confidence: {
     label: 'Alta' | 'Moderada' | 'Inicial' | 'Sem dados';
-    value: number | null;      // score 0-100 quando houver base
-    totalQuestions: number;    // volume real somado
-    totalCards: number;        // cartões Osler reais somados
+    value: number | null;
+    totalQuestions: number;
+    totalCards: number;
   };
   areas: AreaPerformance[];
   studiedCount: number;
   totalCount: number;
-  mappedErrorTopics: number;   // nº real de temas no caderno de erros
+  mappedErrorTopics: number;
 }
 
 function flatten(hierarchy: readonly AreaItem[]): ContentItem[] {
@@ -65,73 +64,81 @@ function flatten(hierarchy: readonly AreaItem[]): ContentItem[] {
   return out;
 }
 
-/** Média simples ignorando nulos; retorna null se lista vazia. */
-function avgOrNull(values: number[]): number | null {
-  if (values.length === 0) return null;
-  const sum = values.reduce((a, b) => a + b, 0);
-  return Math.round((sum / values.length) * 10) / 10; // 1 casa decimal
+/** Acurácia (%) a partir de somas de acertos/total; null se total 0. */
+function accuracyOrNull(correct: number, total: number): number | null {
+  if (total <= 0) return null;
+  return Math.round((correct / total) * 1000) / 10; // 1 casa decimal
 }
 
 /**
- * Constrói todas as métricas da aba Desempenho a partir do currículo já
- * sobreposto (com isStudied real) e do número de temas no caderno de erros.
+ * Constrói as métricas do Desempenho a partir da EVIDÊNCIA REAL registrada
+ * manualmente pela usuária (evidenceLog), atribuída por contentId.
  *
- * Regra central: agregamos SOMENTE sobre conteúdos estudados (isStudied),
- * e cada dimensão só entra na média quando o conteúdo tem evidência real
- * para aquela dimensão (volume > 0). Sem evidência → o KPI fica null.
+ * Regra central: cada KPI só recebe valor quando há registros que o sustentam;
+ * caso contrário, null (a tela mostra "—"). Nada é inventado.
  */
 export function computeDesempenhoMetrics(
   curriculum: readonly AreaItem[],
+  evidenceLog: readonly EvidenceRecord[],
   mappedErrorTopics: number
 ): DesempenhoMetrics {
   const allContents = flatten(curriculum);
   const totalCount = allContents.length;
   const studied = allContents.filter((c) => c.isStudied);
 
-  const knowledgeVals: number[] = [];
-  const applicationVals: number[] = [];
-  const retentionVals: number[] = [];
-  const overallVals: number[] = [];
-
-  let knowledgeEvidence = 0;
-  let applicationEvidence = 0;
-  let retentionEvidence = 0;
-  let totalQuestions = 0;
-  let totalCards = 0;
-
-  for (const content of studied) {
-    const d = calculateContentDomain(content);
-    const ev = d.evidenceStats;
-
-    const knowledgeVol = ev.medwayQuestionsCount;
-    const applicationVol =
-      ev.realExamQuestionsCount + ev.simuladoQuestionsCount;
-    const retentionVol = ev.oslerCardsReviewedCount;
-
-    if (knowledgeVol > 0) {
-      knowledgeVals.push(d.knowledgeScore);
-      knowledgeEvidence += knowledgeVol;
+  // Índice contentId -> área, para o breakdown por área.
+  const contentAreaId = new Map<string, string>();
+  for (const area of curriculum) {
+    for (const mod of area.modules) {
+      for (const c of mod.contents) contentAreaId.set(c.id, area.id);
     }
-    if (applicationVol > 0) {
-      applicationVals.push(d.applicationScore);
-      applicationEvidence += applicationVol;
-    }
-    if (retentionVol > 0) {
-      retentionVals.push(d.retentionScore);
-      retentionEvidence += retentionVol;
-    }
-
-    // Domínio geral só entra quando há QUALQUER evidência real no conteúdo.
-    if (knowledgeVol + applicationVol + retentionVol > 0) {
-      overallVals.push(d.overallDomain);
-    }
-
-    totalQuestions += knowledgeVol + applicationVol;
-    totalCards += retentionVol;
   }
 
-  // Confiança: derivada do volume real total de evidência.
-  const totalEvidence = totalQuestions + totalCards;
+  // Agregações de questões
+  let qTotal = 0;
+  let qCorrect = 0;
+  let appTotal = 0;   // aplicação: registros do tipo 'questoes'
+  let appCorrect = 0;
+  let knowTotal = 0;  // conhecimento: registros do tipo 'avanco' e 'questoes'
+  let knowCorrect = 0;
+  // Retenção (cartões)
+  let cardsCount = 0;
+  let retentionWeightedSum = 0; // média ponderada por nº de cartões
+
+  // por área
+  const areaCorrect = new Map<string, number>();
+  const areaTotal = new Map<string, number>();
+
+  for (const ev of evidenceLog) {
+    const total = ev.questionsTotal ?? 0;
+    const correct = ev.questionsCorrect ?? 0;
+    if (total > 0) {
+      qTotal += total;
+      qCorrect += correct;
+      if (ev.kind === 'questoes') {
+        appTotal += total;
+        appCorrect += correct;
+      }
+      // conhecimento inclui avanço (fixação) e questões
+      knowTotal += total;
+      knowCorrect += correct;
+
+      const aId = contentAreaId.get(ev.contentId);
+      if (aId) {
+        areaCorrect.set(aId, (areaCorrect.get(aId) ?? 0) + correct);
+        areaTotal.set(aId, (areaTotal.get(aId) ?? 0) + total);
+      }
+    }
+    if (ev.cardsReviewed && ev.cardsReviewed > 0 && ev.retentionPercent != null) {
+      cardsCount += ev.cardsReviewed;
+      retentionWeightedSum += ev.retentionPercent * ev.cardsReviewed;
+    }
+  }
+
+  const retentionValue =
+    cardsCount > 0 ? Math.round((retentionWeightedSum / cardsCount) * 10) / 10 : null;
+
+  const totalEvidence = qTotal + cardsCount;
   let confidenceLabel: 'Alta' | 'Moderada' | 'Inicial' | 'Sem dados';
   let confidenceValue: number | null;
   if (totalEvidence === 0) {
@@ -145,42 +152,31 @@ export function computeDesempenhoMetrics(
     confidenceValue = Math.round((totalEvidence / 600) * 100);
   } else {
     confidenceLabel = 'Inicial';
-    confidenceValue = Math.round((totalEvidence / 600) * 100);
+    confidenceValue = Math.max(1, Math.round((totalEvidence / 600) * 100));
   }
 
   const areas: AreaPerformance[] = curriculum.map((area) => {
     const contents = area.modules.flatMap((m) => m.contents);
     const studiedInArea = contents.filter((c) => c.isStudied);
-    const masteryVals: number[] = [];
-    for (const c of studiedInArea) {
-      const d = calculateContentDomain(c);
-      const ev = d.evidenceStats;
-      const vol =
-        ev.medwayQuestionsCount +
-        ev.realExamQuestionsCount +
-        ev.simuladoQuestionsCount +
-        ev.oslerCardsReviewedCount;
-      if (vol > 0) masteryVals.push(d.overallDomain);
-    }
     return {
       id: area.id,
       name: area.name,
-      mastery: avgOrNull(masteryVals),
+      mastery: accuracyOrNull(areaCorrect.get(area.id) ?? 0, areaTotal.get(area.id) ?? 0),
       studiedContents: studiedInArea.length,
       totalContents: contents.length,
     };
   });
 
   return {
-    overallAccuracy: { value: avgOrNull(overallVals), evidenceCount: totalEvidence },
-    knowledge: { value: avgOrNull(knowledgeVals), evidenceCount: knowledgeEvidence },
-    application: { value: avgOrNull(applicationVals), evidenceCount: applicationEvidence },
-    retention: { value: avgOrNull(retentionVals), evidenceCount: retentionEvidence },
+    overallAccuracy: { value: accuracyOrNull(qCorrect, qTotal), evidenceCount: qTotal },
+    knowledge: { value: accuracyOrNull(knowCorrect, knowTotal), evidenceCount: knowTotal },
+    application: { value: accuracyOrNull(appCorrect, appTotal), evidenceCount: appTotal },
+    retention: { value: retentionValue, evidenceCount: cardsCount },
     confidence: {
       label: confidenceLabel,
       value: confidenceValue,
-      totalQuestions,
-      totalCards,
+      totalQuestions: qTotal,
+      totalCards: cardsCount,
     },
     areas,
     studiedCount: studied.length,
