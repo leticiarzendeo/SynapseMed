@@ -69,6 +69,22 @@ export default function App() {
     return initialCadernoErros;
   });
 
+  // Conteúdos concluídos a partir de telas que ainda usam modelo próprio
+  // (HojeView, PlanejamentoView). Elas avisam o App só com o contentId
+  // ("a ponte"), sem migrar seus tipos internos.
+  const [manualStudiedContentIds, setManualStudiedContentIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem('synapsemed_manual_studied');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
   // Modal controls
   const [coordinatingActivity, setCoordinatingActivity] = useState<StudyActivity | null>(null);
   const [showRegistrarModal, setShowRegistrarModal] = useState(false);
@@ -87,6 +103,23 @@ export default function App() {
     localStorage.setItem('synapsemed_caderno_erros', JSON.stringify(cadernoErros));
   }, [cadernoErros]);
 
+  useEffect(() => {
+    localStorage.setItem(
+      'synapsemed_manual_studied',
+      JSON.stringify(manualStudiedContentIds)
+    );
+  }, [manualStudiedContentIds]);
+
+  // A PONTE: telas com modelo próprio chamam isto ao concluir uma atividade,
+  // passando apenas o contentId. Assim a conclusão propaga para o currículo,
+  // domínio e priorização sem migrar os tipos internos dessas telas.
+  const handleContentStudied = (contentId?: string) => {
+    if (!contentId) return;
+    setManualStudiedContentIds((prev) =>
+      prev.includes(contentId) ? prev : [...prev, contentId]
+    );
+  };
+
   // ============================================================
   // FONTE DA VERDADE DO PROGRESSO CURRICULAR
   // Sobrepõe ao currículo estático os conteúdos efetivamente
@@ -96,8 +129,8 @@ export default function App() {
   // domainCalculator e priorização.
   // ============================================================
   const { curriculum: studiedCurriculum, studiedContentIds } = useMemo(
-    () => buildStudiedCurriculum(fullCurriculumHierarchy, activities),
-    [activities]
+    () => buildStudiedCurriculum(fullCurriculumHierarchy, activities, manualStudiedContentIds),
+    [activities, manualStudiedContentIds]
   );
 
   const showToast = (msg: string) => {
@@ -206,12 +239,14 @@ export default function App() {
       localStorage.removeItem('synapsemed_activities');
       localStorage.removeItem('synapsemed_prefs');
       localStorage.removeItem('synapsemed_caderno_erros');
+      localStorage.removeItem('synapsemed_manual_studied');
       localStorage.removeItem('synapsemed_weekly_completed_minutes');
       localStorage.setItem('synapsemed_storage_version', CURRENT_STORAGE_VERSION);
     }
     setActivities(initialActivities);
     setPreferences(initialPreferences);
     setCadernoErros(initialCadernoErros);
+    setManualStudiedContentIds([]);
     setCurrentPath('hoje');
     showToast('Ambiente restaurado para o início dos estudos (0% concluído).');
   };
@@ -300,6 +335,7 @@ export default function App() {
               preferences={preferences}
               onNavigateToPlanejamento={() => setCurrentPath('planejamento')}
               onNavigateToCurriculo={() => setCurrentPath('curriculo')}
+              onContentStudied={handleContentStudied}
             />
           )}
 
@@ -307,6 +343,7 @@ export default function App() {
             <PlanejamentoView
               preferences={preferences}
               onOpenAjustarMetas={() => setShowAjustarMetasModal(true)}
+              onContentStudied={handleContentStudied}
             />
           )}
 
