@@ -2,6 +2,7 @@ export type ViewPath =
   | 'hoje'
   | 'planejamento'
   | 'curriculo'
+  | 'prioridades'
   | 'desempenho'
   | 'revisoes'
   | 'provas-e-simulados'
