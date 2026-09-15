@@ -12,6 +12,7 @@ const navItems: { path: ViewPath; label: string; icon: string }[] = [
   { path: 'hoje', label: 'Hoje', icon: 'calendar_today' },
   { path: 'planejamento', label: 'Planejamento', icon: 'view_week' },
   { path: 'curriculo', label: 'Currículo', icon: 'account_tree' },
+  { path: 'prioridades', label: 'Prioridades', icon: 'flag' },
   { path: 'desempenho', label: 'Desempenho', icon: 'insights' },
   { path: 'revisoes', label: 'Revisões', icon: 'replay' },
   { path: 'provas-e-simulados', label: 'Provas e Simulados', icon: 'assignment' },
