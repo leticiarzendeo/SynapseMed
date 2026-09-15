@@ -143,9 +143,17 @@ export function applyStudiedOverlay(
  */
 export function buildStudiedCurriculum(
   baseHierarchy: readonly AreaItem[],
-  activities: readonly StudyActivity[]
+  activities: readonly StudyActivity[],
+  extraStudiedContentIds?: readonly string[]
 ): { curriculum: AreaItem[]; studiedContentIds: Set<string> } {
   const studiedContentIds = deriveStudiedContentIds(activities);
+  // Conteúdos marcados como concluídos por telas com modelo próprio
+  // (HojeView, PlanejamentoView), que passam apenas o contentId "pela ponte".
+  if (extraStudiedContentIds) {
+    for (const id of extraStudiedContentIds) {
+      if (id) studiedContentIds.add(id);
+    }
+  }
   const lastStudiedDates = deriveLastStudiedDates(activities);
   const curriculum = applyStudiedOverlay(
     baseHierarchy,
