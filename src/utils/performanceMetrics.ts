@@ -20,6 +20,7 @@
 // ============================================================================
 
 import { AreaItem, ContentItem, EvidenceRecord } from '../types';
+import { getContentState } from './contentState';
 
 export interface KpiValue {
   /** Valor 0-100 quando há base real; null quando não há dados. */
@@ -84,7 +85,9 @@ export function computeDesempenhoMetrics(
 ): DesempenhoMetrics {
   const allContents = flatten(curriculum);
   const totalCount = allContents.length;
-  const studied = allContents.filter((c) => c.isStudied);
+  // "estudado" = iniciado (em andamento + dominado), pelo domínio real —
+  // coerente com Currículo e Prioridades (não usa mais o isStudied frouxo).
+  const studied = allContents.filter((c) => getContentState(c) !== 'nao_iniciado');
 
   // Índice contentId -> área, para o breakdown por área.
   const contentAreaId = new Map<string, string>();
@@ -157,7 +160,7 @@ export function computeDesempenhoMetrics(
 
   const areas: AreaPerformance[] = curriculum.map((area) => {
     const contents = area.modules.flatMap((m) => m.contents);
-    const studiedInArea = contents.filter((c) => c.isStudied);
+    const studiedInArea = contents.filter((c) => getContentState(c) !== 'nao_iniciado');
     return {
       id: area.id,
       name: area.name,

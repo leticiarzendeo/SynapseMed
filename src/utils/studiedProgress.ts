@@ -25,6 +25,7 @@
 // ============================================================================
 
 import { AreaItem, ModuleItem, ContentItem, StudyActivity } from '../types';
+import { getStateTotals, getContentState } from './contentState';
 
 /**
  * Deriva o conjunto de contentIds efetivamente concluídos a partir das
@@ -109,8 +110,15 @@ export function applyStudiedOverlay(
         return overlaid;
       });
 
-      const studiedContents = contents.filter((c) => c.isStudied).length;
-      const consolidatedContents = contents.filter((c) => c.isConsolidated).length;
+      // Roll-ups por DOMÍNIO REAL (coerente com todas as telas):
+      //   studiedContents      = iniciados (em andamento + dominado)
+      //   consolidatedContents = dominados
+      const studiedContents = contents.filter(
+        (c) => getContentState(c) !== 'nao_iniciado'
+      ).length;
+      const consolidatedContents = contents.filter(
+        (c) => getContentState(c) === 'dominado'
+      ).length;
 
       const overlaidModule: ModuleItem = {
         ...mod,
@@ -168,28 +176,19 @@ export function buildStudiedCurriculum(
  * Substitui getCurriculumTotals() (que lia o currículo estático travado).
  */
 export function getStudiedCurriculumTotals(hierarchy: readonly AreaItem[]) {
-  let total = 0;
-  let studied = 0;
-  let consolidated = 0;
-
-  for (const area of hierarchy) {
-    for (const mod of area.modules) {
-      for (const c of mod.contents) {
-        total += 1;
-        if (c.isStudied) studied += 1;
-        if (c.isConsolidated) consolidated += 1;
-      }
-    }
-  }
-
-  const safeTotal = total || 236;
-  const pending = safeTotal - studied;
-
+  // Contagem baseada no DOMÍNIO REAL (3 estados), não no isStudied frouxo:
+  //   studied       = iniciado (em andamento + dominado) — saiu do zero
+  //   consolidated  = dominado (passou nos cortes de segurança)
+  // Mantém a mesma forma de retorno para os consumidores existentes.
+  const t = getStateTotals(hierarchy);
+  const safeTotal = t.total || 236;
+  const studied = t.iniciado;
+  const consolidated = t.dominado;
   return {
     total: safeTotal,
     studied,
     consolidated,
-    pending,
+    pending: safeTotal - studied,
     studiedPercent: Math.round((studied / safeTotal) * 100),
     consolidatedPercent: Math.round((consolidated / safeTotal) * 100),
   };

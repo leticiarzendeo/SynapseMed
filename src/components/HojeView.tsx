@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { UserPreferences, ErrorReasonType, ContentItem } from '../types';
+import { UserPreferences, ErrorReasonType, ContentItem, AreaItem } from '../types';
+import { getContentState } from '../utils/contentState';
 import { getAllCurriculumContents } from '../data/mockData';
 import { DominioDossieModal } from './DominioDossieModal';
 
@@ -47,6 +48,8 @@ interface HojeViewProps {
    * o modelo interno ActivityItem.
    */
   onContentStudied?: (contentId?: string) => void;
+  /** Currículo sobreposto (progresso real) para o resumo de progresso. */
+  curriculum?: AreaItem[];
 }
 
 export const HojeView: React.FC<HojeViewProps> = ({
@@ -54,6 +57,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
   onNavigateToPlanejamento,
   onNavigateToCurriculo,
   onContentStudied,
+  curriculum,
 }) => {
   // Cota de disponibilidade diária (Padrão 100 min / 1h40 conforme especificação)
   const [availableTodayMin, setAvailableTodayMin] = useState<number>(100);
@@ -62,7 +66,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
   const canonicalRecommendedActivities: ActivityItem[] = [
     {
       id: 'act-dpoc-teoria',
-      contentId: 'c-dpoc',
+      contentId: 'c-disturbios-obstrutivos',
       name: 'DPOC',
       subType: 'Teoria Medway',
       durationMin: 50,
@@ -84,7 +88,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
     },
     {
       id: 'act-dpoc',
-      contentId: 'c-dpoc',
+      contentId: 'c-disturbios-obstrutivos',
       name: 'DPOC',
       subType: 'questões de provas',
       durationMin: 40,
@@ -106,7 +110,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
     },
     {
       id: 'act-icc',
-      contentId: 'c-icc',
+      contentId: 'c-insuficiencia-cardiaca',
       name: 'ICC',
       subType: 'revisão',
       durationMin: 30,
@@ -939,7 +943,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
 
             <div className="pt-1">
               <button
-                onClick={() => handleOpenDossier('c-dpoc', 'DPOC')}
+                onClick={() => handleOpenDossier('c-disturbios-obstrutivos', 'DPOC')}
                 className="px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold flex items-center gap-1.5 transition-all border border-surface-container"
               >
                 <span className="material-symbols-outlined text-sm text-primary">description</span>
@@ -1002,7 +1006,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
 
             <div className="pt-1">
               <button
-                onClick={() => handleOpenDossier('c-icc', 'ICC')}
+                onClick={() => handleOpenDossier('c-insuficiencia-cardiaca', 'ICC')}
                 className="px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold flex items-center gap-1.5 transition-all border border-surface-container"
               >
                 <span className="material-symbols-outlined text-sm text-primary">description</span>
@@ -1188,13 +1192,19 @@ export const HojeView: React.FC<HojeViewProps> = ({
         </div>
 
         {(() => {
-          const allCurriculumContents = getAllCurriculumContents();
+          const overlaidContents = (curriculum ?? []).flatMap((a) =>
+            a.modules.flatMap((m) => m.contents)
+          );
+          const allCurriculumContents = overlaidContents.length
+            ? overlaidContents
+            : getAllCurriculumContents();
           const totalCurriculumCount = allCurriculumContents.length;
+          // Coerente com as demais telas: estado por domínio real.
           const studiedContentsCount = allCurriculumContents.filter(
-            (c) => c.isStudied || c.status !== 'Não iniciado'
+            (c) => getContentState(c) !== 'nao_iniciado'
           ).length;
           const consolidatedCount = allCurriculumContents.filter(
-            (c) => c.isConsolidated || (c.estimatedMastery || 0) >= 85
+            (c) => getContentState(c) === 'dominado'
           ).length;
           const studiedPercentStr =
             totalCurriculumCount > 0

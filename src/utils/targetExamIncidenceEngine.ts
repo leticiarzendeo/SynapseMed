@@ -29,7 +29,7 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     id: 'q-seed-dpoc-uspsp-2025',
     questionNumber: 4,
     statementSnippet: 'Homem de 67 anos, tabagista 55 anos-maço, dispneia mMRC 3 e tosse crônica. Espirometria com relação VEF1/CVF de 0,56 pós-broncodilatador e VEF1 48% do previsto. Histórico de 2 exacerbações com antibiótico no último ano. Classificação GOLD e tratamento inalatório de escolha.',
-    contentId: 'c-dpoc',
+    contentId: 'c-disturbios-obstrutivos',
     contentName: 'DPOC (Doença Pulmonar Obstrutiva Crônica)',
     moduloName: 'Pneumologia',
     areaName: 'Clínica Médica',
@@ -38,14 +38,14 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     isCorrect: false,
     classificationStatus: 'ia_confiavel',
     confidenceScore: 98,
-    aiSuggestedContentId: 'c-dpoc',
+    aiSuggestedContentId: 'c-disturbios-obstrutivos',
     mappedOslerBlocks: [{ id: 'osler-dpoc-espirometria', title: 'DPOC - Diagnóstico e Espirometria' }, { id: 'osler-dpoc-gold', title: 'DPOC - Classificação GOLD e Farmacoterapia' }]
   },
   {
     id: 'q-seed-dpoc-usprp-2025',
     questionNumber: 7,
     statementSnippet: 'Paciente de 64 anos com DPOC grave chega ao pronto-atendimento com piora do padrão de dispneia, aumento do volume e da purulência do escarro (Critérios de Anthonisen I). Gasometria com pH 7,31, PaCO2 58 mmHg e PaO2 54 mmHg em ar ambiente. Indicação de VNI e antibióticoterapia.',
-    contentId: 'c-dpoc',
+    contentId: 'c-disturbios-obstrutivos',
     contentName: 'DPOC (Doença Pulmonar Obstrutiva Crônica)',
     moduloName: 'Pneumologia',
     areaName: 'Clínica Médica',
@@ -54,14 +54,14 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     isCorrect: false,
     classificationStatus: 'ia_confiavel',
     confidenceScore: 97,
-    aiSuggestedContentId: 'c-dpoc',
+    aiSuggestedContentId: 'c-disturbios-obstrutivos',
     mappedOslerBlocks: [{ id: 'osler-dpoc-exacerbacao', title: 'Exacerbação Aguda da DPOC & VNI' }]
   },
   {
     id: 'q-seed-dpoc-enamed-2025',
     questionNumber: 12,
     statementSnippet: 'Na Unidade Básica de Saúde, paciente de 60 anos com tosse produtiva há 3 anos e tabagismo de 40 anos-maço solicita indicação de rastreio ou exames. Qual a conduta diagnóstica padrão-ouro recomendada pelo Ministério da Saúde e PCDT?',
-    contentId: 'c-dpoc',
+    contentId: 'c-disturbios-obstrutivos',
     contentName: 'DPOC (Doença Pulmonar Obstrutiva Crônica)',
     moduloName: 'Pneumologia',
     areaName: 'Clínica Médica',
@@ -70,14 +70,14 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     isCorrect: false,
     classificationStatus: 'ia_confiavel',
     confidenceScore: 96,
-    aiSuggestedContentId: 'c-dpoc',
+    aiSuggestedContentId: 'c-disturbios-obstrutivos',
     mappedOslerBlocks: [{ id: 'osler-dpoc-espirometria', title: 'DPOC - Diagnóstico e Espirometria' }]
   },
   {
     id: 'q-seed-dpoc-unicamp-2025',
     questionNumber: 15,
     statementSnippet: 'Mulher de 62 anos, ex-tabagista de 45 anos-maço, em uso de LAMA + LABA. Apresenta eosinófilos sanguíneos de 380 células/mcL e queixa de cansaço aos médios esforços sem novas exacerbações. Qual o benefício da adição de Corticoide Inalatório?',
-    contentId: 'c-dpoc',
+    contentId: 'c-disturbios-obstrutivos',
     contentName: 'DPOC (Doença Pulmonar Obstrutiva Crônica)',
     moduloName: 'Pneumologia',
     areaName: 'Clínica Médica',
@@ -86,14 +86,14 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     isCorrect: false,
     classificationStatus: 'ia_confiavel',
     confidenceScore: 94,
-    aiSuggestedContentId: 'c-dpoc',
+    aiSuggestedContentId: 'c-disturbios-obstrutivos',
     mappedOslerBlocks: [{ id: 'osler-dpoc-gold', title: 'DPOC - Classificação GOLD e Farmacoterapia' }]
   },
   {
     id: 'q-seed-dpoc-hiae-2025',
     questionNumber: 9,
     statementSnippet: 'Paciente hospitalizado com exacerbação infecciosa de DPOC sob oxigenoterapia suplementar em cateter nasal a 4 L/min desenvolve sonolência e torpor. Gasometria arterial com acidose respiratória aguda grave por hipoventilação induzida pelo oxigênio (Efeito Haldane).',
-    contentId: 'c-dpoc',
+    contentId: 'c-disturbios-obstrutivos',
     contentName: 'DPOC (Doença Pulmonar Obstrutiva Crônica)',
     moduloName: 'Pneumologia',
     areaName: 'Clínica Médica',
@@ -102,7 +102,7 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     isCorrect: false,
     classificationStatus: 'ia_confiavel',
     confidenceScore: 95,
-    aiSuggestedContentId: 'c-dpoc',
+    aiSuggestedContentId: 'c-disturbios-obstrutivos',
     mappedOslerBlocks: [{ id: 'osler-dpoc-exacerbacao', title: 'Exacerbação Aguda da DPOC & VNI' }]
   },
   // Mais questões históricas de DPOC nos últimos 5 anos
@@ -110,7 +110,7 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     id: 'q-seed-dpoc-uspsp-2024',
     questionNumber: 8,
     statementSnippet: 'Critérios de oxigenoterapia domiciliar prolongada na DPOC estável: PaO2 em repouso ≤ 55 mmHg ou SpO2 ≤ 88% confirmada em duas gasometrias com intervalo de 3 semanas.',
-    contentId: 'c-dpoc',
+    contentId: 'c-disturbios-obstrutivos',
     contentName: 'DPOC (Doença Pulmonar Obstrutiva Crônica)',
     moduloName: 'Pneumologia',
     areaName: 'Clínica Médica',
@@ -119,14 +119,14 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     isCorrect: true,
     classificationStatus: 'ia_confiavel',
     confidenceScore: 98,
-    aiSuggestedContentId: 'c-dpoc',
+    aiSuggestedContentId: 'c-disturbios-obstrutivos',
     mappedOslerBlocks: [{ id: 'osler-dpoc-gold', title: 'DPOC - Classificação GOLD e Farmacoterapia' }]
   },
   {
     id: 'q-seed-dpoc-usprp-2024',
     questionNumber: 11,
     statementSnippet: 'Avaliação de enfisema pulmonar centroacinar versus panacinar em paciente de 38 anos não tabagista com hepatopatia crônica. Dosagem de alfa-1 antitripsina sérica.',
-    contentId: 'c-dpoc',
+    contentId: 'c-disturbios-obstrutivos',
     contentName: 'DPOC (Doença Pulmonar Obstrutiva Crônica)',
     moduloName: 'Pneumologia',
     areaName: 'Clínica Médica',
@@ -135,14 +135,14 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     isCorrect: true,
     classificationStatus: 'ia_confiavel',
     confidenceScore: 93,
-    aiSuggestedContentId: 'c-dpoc',
+    aiSuggestedContentId: 'c-disturbios-obstrutivos',
     mappedOslerBlocks: [{ id: 'osler-dpoc-espirometria', title: 'DPOC - Diagnóstico e Espirometria' }]
   },
   {
     id: 'q-seed-dpoc-enamed-2024',
     questionNumber: 18,
     statementSnippet: 'Conduta na cessação do tabagismo em paciente com DPOC: Terapia de Reposição de Nicotina associada à Bupropiona e intervenção comportamental breve.',
-    contentId: 'c-dpoc',
+    contentId: 'c-disturbios-obstrutivos',
     contentName: 'DPOC (Doença Pulmonar Obstrutiva Crônica)',
     moduloName: 'Pneumologia',
     areaName: 'Clínica Médica',
@@ -151,14 +151,14 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     isCorrect: true,
     classificationStatus: 'ia_confiavel',
     confidenceScore: 92,
-    aiSuggestedContentId: 'c-dpoc',
+    aiSuggestedContentId: 'c-disturbios-obstrutivos',
     mappedOslerBlocks: [{ id: 'osler-dpoc-gold', title: 'DPOC - Classificação GOLD e Farmacoterapia' }]
   },
   {
     id: 'q-seed-dpoc-unicamp-2023',
     questionNumber: 6,
     statementSnippet: 'Homem de 65 anos com DPOC fenotipo enfisematoso, tórax em barril, hiperinsuflação e diminuição difusa do murmúrio vesicular.',
-    contentId: 'c-dpoc',
+    contentId: 'c-disturbios-obstrutivos',
     contentName: 'DPOC (Doença Pulmonar Obstrutiva Crônica)',
     moduloName: 'Pneumologia',
     areaName: 'Clínica Médica',
@@ -167,14 +167,14 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     isCorrect: false,
     classificationStatus: 'ia_confiavel',
     confidenceScore: 97,
-    aiSuggestedContentId: 'c-dpoc',
+    aiSuggestedContentId: 'c-disturbios-obstrutivos',
     mappedOslerBlocks: [{ id: 'osler-dpoc-espirometria', title: 'DPOC - Diagnóstico e Espirometria' }]
   },
   {
     id: 'q-seed-dpoc-hiae-2023',
     questionNumber: 14,
     statementSnippet: 'Critérios diagnósticos de hipertensão pulmonar associada à DPOC avançada (Grupo 3 de HP) e ecocardiograma com PSAP elevada.',
-    contentId: 'c-dpoc',
+    contentId: 'c-disturbios-obstrutivos',
     contentName: 'DPOC (Doença Pulmonar Obstrutiva Crônica)',
     moduloName: 'Pneumologia',
     areaName: 'Clínica Médica',
@@ -183,14 +183,14 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     isCorrect: true,
     classificationStatus: 'ia_confiavel',
     confidenceScore: 90,
-    aiSuggestedContentId: 'c-dpoc',
+    aiSuggestedContentId: 'c-disturbios-obstrutivos',
     mappedOslerBlocks: [{ id: 'osler-dpoc-gold', title: 'DPOC - Classificação GOLD e Farmacoterapia' }]
   },
   {
     id: 'q-seed-dpoc-usprp-2022',
     questionNumber: 10,
     statementSnippet: 'Uso de vacinação anual contra Influenza e vacina pneumocócica conjugada na prevenção de exacerbações de DPOC moderada a grave.',
-    contentId: 'c-dpoc',
+    contentId: 'c-disturbios-obstrutivos',
     contentName: 'DPOC (Doença Pulmonar Obstrutiva Crônica)',
     moduloName: 'Pneumologia',
     areaName: 'Clínica Médica',
@@ -199,14 +199,14 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     isCorrect: true,
     classificationStatus: 'ia_confiavel',
     confidenceScore: 95,
-    aiSuggestedContentId: 'c-dpoc',
+    aiSuggestedContentId: 'c-disturbios-obstrutivos',
     mappedOslerBlocks: [{ id: 'osler-dpoc-gold', title: 'DPOC - Classificação GOLD e Farmacoterapia' }]
   },
   {
     id: 'q-seed-dpoc-uspsp-2021',
     questionNumber: 5,
     statementSnippet: 'Diferenciação entre DPOC e Asma Brônquica: resposta espirométrica completa vs obstrutivo fixo sem normalização.',
-    contentId: 'c-dpoc',
+    contentId: 'c-disturbios-obstrutivos',
     contentName: 'DPOC (Doença Pulmonar Obstrutiva Crônica)',
     moduloName: 'Pneumologia',
     areaName: 'Clínica Médica',
@@ -215,7 +215,7 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     isCorrect: true,
     classificationStatus: 'ia_confiavel',
     confidenceScore: 96,
-    aiSuggestedContentId: 'c-dpoc',
+    aiSuggestedContentId: 'c-disturbios-obstrutivos',
     mappedOslerBlocks: [{ id: 'osler-dpoc-espirometria', title: 'DPOC - Diagnóstico e Espirometria' }]
   },
 
@@ -226,7 +226,7 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     id: 'q-seed-doubt-asma-dpoc-usprp-2025',
     questionNumber: 19,
     statementSnippet: 'Paciente de 52 anos, tabagista ativo 20 anos-maço com história na infância de rinite alérgica e eczema atópico. Apresenta dispneia variável com despertares noturnos por tosse seca e sibilos inspiratórios/expiratórios. Espirometria com VEF1/CVF 0,66 e ganho pós-broncodilatador de 280 mL e 14% de variação no VEF1.',
-    contentId: 'c-dpoc',
+    contentId: 'c-disturbios-obstrutivos',
     contentName: 'DPOC (Doença Pulmonar Obstrutiva Crônica)',
     moduloName: 'Pneumologia',
     areaName: 'Clínica Médica',
@@ -236,7 +236,7 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     classificationStatus: 'duvida_revisao',
     confidenceScore: 58,
     doubtReason: 'Sobreposição clínica entre DPOC e Asma Brônquica (Síndrome de Overlap / ACOS): paciente tabagista, porém com atopia na infância e resposta broncodilatadora significativa. Sugerida DPOC, mas requer validação manual da usuária.',
-    aiSuggestedContentId: 'c-dpoc',
+    aiSuggestedContentId: 'c-disturbios-obstrutivos',
     mappedOslerBlocks: [{ id: 'osler-dpoc-espirometria', title: 'DPOC - Diagnóstico e Espirometria' }, { id: 'osler-asma-crise', title: 'Asma Brônquica e Manejo' }]
   },
   {
@@ -284,7 +284,7 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     id: 'q-seed-icc-uspsp-2025',
     questionNumber: 2,
     statementSnippet: 'Homem de 63 anos, hipertenso e diabético com ICFER (FEVE 28%), classe funcional NYHA III em uso de Enalapril 20mg 2x/dia e Carvedilol 25mg 2x/dia. Conduta para redução de mortalidade: substituição de Enalapril por Sacubitril/Valsartana e introdução de Dapagliflozina e Espironolactona (terapia quádrupla otimizada).',
-    contentId: 'c-icc',
+    contentId: 'c-insuficiencia-cardiaca',
     contentName: 'Insuficiência Cardíaca Congestiva (ICC)',
     moduloName: 'Cardiologia',
     areaName: 'Clínica Médica',
@@ -293,14 +293,14 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     isCorrect: true,
     classificationStatus: 'ia_confiavel',
     confidenceScore: 98,
-    aiSuggestedContentId: 'c-icc',
+    aiSuggestedContentId: 'c-insuficiencia-cardiaca',
     mappedOslerBlocks: [{ id: 'osler-icfer-terapia-farmacologica', title: 'ICFER - Terapia Quádrupla Otimizada' }]
   },
   {
     id: 'q-seed-icc-usprp-2025',
     questionNumber: 5,
     statementSnippet: 'Paciente internado em UTI com descompensação aguda de insuficiência cardíaca crônica apresentando extremidades frias, tempo de enchimento capilar de 5 segundos, PA 85x50 mmHg e estertoração pulmonar bilateral até ápices (Perfil C de Stevenson: Frio e Úmido). Indicação de Dobutamina antes de diuréticos em alta dose.',
-    contentId: 'c-icc',
+    contentId: 'c-insuficiencia-cardiaca',
     contentName: 'Insuficiência Cardíaca Congestiva (ICC)',
     moduloName: 'Cardiologia',
     areaName: 'Clínica Médica',
@@ -309,14 +309,14 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     isCorrect: false,
     classificationStatus: 'ia_confiavel',
     confidenceScore: 97,
-    aiSuggestedContentId: 'c-icc',
+    aiSuggestedContentId: 'c-insuficiencia-cardiaca',
     mappedOslerBlocks: [{ id: 'osler-ic-descompensada-stevenson', title: 'IC Descompensada - Perfis de Stevenson' }]
   },
   {
     id: 'q-seed-icc-enamed-2025',
     questionNumber: 3,
     statementSnippet: 'Na consulta médica ambulatorial, idosa com dispneia paroxística noturna, turgência jugular patológica a 45º e refluxo hepatojugular presente. Aplicação dos Critérios de Boston e Framingham para diagnóstico clínico de Insuficiência Cardíaca.',
-    contentId: 'c-icc',
+    contentId: 'c-insuficiencia-cardiaca',
     contentName: 'Insuficiência Cardíaca Congestiva (ICC)',
     moduloName: 'Cardiologia',
     areaName: 'Clínica Médica',
@@ -325,14 +325,14 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     isCorrect: true,
     classificationStatus: 'ia_confiavel',
     confidenceScore: 96,
-    aiSuggestedContentId: 'c-icc',
+    aiSuggestedContentId: 'c-insuficiencia-cardiaca',
     mappedOslerBlocks: [{ id: 'osler-criterios-framingham-ic', title: 'Critérios de Framingham no Diagnóstico da IC' }]
   },
   {
     id: 'q-seed-icc-unicamp-2024',
     questionNumber: 1,
     statementSnippet: 'Escore de Framingham para insuficiência cardíaca congestiva: critérios maiores vs menores e utilidade da dosagem de NT-proBNP com alto valor preditivo negativo.',
-    contentId: 'c-icc',
+    contentId: 'c-insuficiencia-cardiaca',
     contentName: 'Insuficiência Cardíaca Congestiva (ICC)',
     moduloName: 'Cardiologia',
     areaName: 'Clínica Médica',
@@ -341,14 +341,14 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     isCorrect: true,
     classificationStatus: 'ia_confiavel',
     confidenceScore: 95,
-    aiSuggestedContentId: 'c-icc',
+    aiSuggestedContentId: 'c-insuficiencia-cardiaca',
     mappedOslerBlocks: [{ id: 'osler-criterios-framingham-ic', title: 'Critérios de Framingham no Diagnóstico da IC' }]
   },
   {
     id: 'q-seed-icc-hiae-2024',
     questionNumber: 6,
     statementSnippet: 'Manejo de choque cardiogênico refratário: indicação de balão intra-aórtico de contrapulsação e dispositivos de assistência ventricular temporária.',
-    contentId: 'c-icc',
+    contentId: 'c-insuficiencia-cardiaca',
     contentName: 'Insuficiência Cardíaca Congestiva (ICC)',
     moduloName: 'Cardiologia',
     areaName: 'Clínica Médica',
@@ -357,14 +357,14 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     isCorrect: true,
     classificationStatus: 'ia_confiavel',
     confidenceScore: 94,
-    aiSuggestedContentId: 'c-icc',
+    aiSuggestedContentId: 'c-insuficiencia-cardiaca',
     mappedOslerBlocks: [{ id: 'osler-icfer-terapia-farmacologica', title: 'ICFER - Terapia Quádrupla Otimizada' }]
   },
   {
     id: 'q-seed-icc-usprp-2023',
     questionNumber: 4,
     statementSnippet: 'Intoxicação digitálica em paciente com insuficiência cardíaca congestiva em uso de Furosemida com hipocalemia associada. Alterações eletrocardiográficas com extrassístoles ventriculares pareadas.',
-    contentId: 'c-icc',
+    contentId: 'c-insuficiencia-cardiaca',
     contentName: 'Insuficiência Cardíaca Congestiva (ICC)',
     moduloName: 'Cardiologia',
     areaName: 'Clínica Médica',
@@ -373,7 +373,7 @@ export const SEED_TARGET_QUESTIONS: ExamQuestionEntry[] = [
     isCorrect: false,
     classificationStatus: 'ia_confiavel',
     confidenceScore: 92,
-    aiSuggestedContentId: 'c-icc',
+    aiSuggestedContentId: 'c-insuficiencia-cardiaca',
     mappedOslerBlocks: [{ id: 'osler-icfer-terapia-farmacologica', title: 'ICFER - Terapia Quádrupla Otimizada' }]
   },
 
@@ -926,7 +926,7 @@ export function classifyQuestionStatementWithAI(params: {
     // Verificar se há ambiguidade com Asma
     if (s.includes('asma') || s.includes('atopia') || s.includes('reversibilidade completa')) {
       return {
-        contentId: 'c-dpoc',
+        contentId: 'c-disturbios-obstrutivos',
         contentName: 'DPOC (Doença Pulmonar Obstrutiva Crônica)',
         moduloName: 'Pneumologia',
         areaName: 'Clínica Médica',
@@ -940,7 +940,7 @@ export function classifyQuestionStatementWithAI(params: {
       };
     }
     return {
-      contentId: 'c-dpoc',
+      contentId: 'c-disturbios-obstrutivos',
       contentName: 'DPOC (Doença Pulmonar Obstrutiva Crônica)',
       moduloName: 'Pneumologia',
       areaName: 'Clínica Médica',
@@ -975,7 +975,7 @@ export function classifyQuestionStatementWithAI(params: {
     s.includes('stevenson')
   ) {
     return {
-      contentId: 'c-icc',
+      contentId: 'c-insuficiencia-cardiaca',
       contentName: 'Insuficiência Cardíaca Congestiva (ICC)',
       moduloName: 'Cardiologia',
       areaName: 'Clínica Médica',

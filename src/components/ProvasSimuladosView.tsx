@@ -28,6 +28,8 @@ import {
 import { ExamPdfAuditModal } from './ExamPdfAuditModal';
 import { RegistroManualProva } from './RegistroManualProva';
 import { EvidenceRecord } from '../types';
+import { ImportarProvaIA } from './ImportarProvaIA';
+import { ImportResult } from '../utils/examImportEngine';
 
 export interface DownloadedExam {
   id: string;
@@ -242,6 +244,10 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
 }) => {
   // Painel de registro manual de prova/simulado (sem IA)
   const [showManualRegistro, setShowManualRegistro] = useState(false);
+  // Importação do JSON classificado por IA externa
+  const [showImportIA, setShowImportIA] = useState(false);
+  // Provas já enviadas ao Desempenho (evita contagem dupla de evidência)
+  const [savedToDesempenho, setSavedToDesempenho] = useState<Set<string>>(new Set());
   // Lista de simulados/provas baixados
   const [downloadedExams, setDownloadedExams] = useState<DownloadedExam[]>(() => {
     try {
@@ -316,7 +322,7 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
   const fullContentList: ContentItem[] = fullCurriculumHierarchy.flatMap((area) =>
     area.modules.flatMap((mod) => mod.contents)
   );
-  const [selectedContentId, setSelectedContentId] = useState<string>('c-dpoc');
+  const [selectedContentId, setSelectedContentId] = useState<string>('c-disturbios-obstrutivos');
   const selectedContent = fullContentList.find((c) => c.id === selectedContentId) || fullContentList[0];
   const [realExamModalContent, setRealExamModalContent] = useState<ContentItem | null>(null);
   const [simuladoModalContent, setSimuladoModalContent] = useState<ContentItem | null>(null);
@@ -326,6 +332,57 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
   const notifySuccess = (title: string, desc: string) => {
     setSuccessBanner({ title, desc });
     setTimeout(() => setSuccessBanner(null), 5000);
+  };
+
+  // CRIA UM REGISTRO DE PROVA NA LISTA A PARTIR DA IMPORTAÇÃO DO JSON DA IA.
+  // Assim a prova importada aparece na lista e fica disponível para consulta,
+  // além de já ter alimentado evidência/caderno/priorização.
+  const handleCreateExamFromImport = (result: ImportResult) => {
+    const officialAnswers: { [q: number]: string } = {};
+    const studentAnswers: { [q: number]: string } = {};
+    const questionErrorReasons: { [q: number]: ErrorReasonType } = {};
+
+    const questions: ExamQuestionEntry[] = result.questions.map((q) => {
+      if (q.officialAnswer) officialAnswers[q.number] = q.officialAnswer;
+      if (q.userAnswer) studentAnswers[q.number] = q.userAnswer;
+      if (!q.correct) questionErrorReasons[q.number] = 'nao_sabia';
+      return {
+        id: `q-import-${Date.now()}-${q.number}`,
+        questionNumber: q.number,
+        statementSnippet: q.statement || `Questão ${q.number}`,
+        contentId: q.resolvedContentId || q.contentId || '',
+        contentName: q.resolvedContentName || q.contentName || '',
+        moduloName: q.moduleName || '',
+        areaName: q.resolvedArea || q.areaName || '',
+        isCorrect: q.correct,
+        errorReason: q.correct ? undefined : 'nao_sabia',
+        aiSuggestedContentId: q.contentId || '',
+        institution: result.institution || undefined,
+        year: result.year || undefined,
+        classificationStatus: q.resolvedContentId ? 'ia_confiavel' : 'duvida_revisao',
+      };
+    });
+
+    const newExam: DownloadedExam = {
+      id: `exam-import-${Date.now()}`,
+      title: result.source || `${result.institution || 'Prova'} ${result.year || ''}`.trim(),
+      institution: result.institution || 'Importada',
+      year: result.year || new Date().getFullYear(),
+      type: 'SIMULADO',
+      totalQuestions: result.totalQuestions,
+      officialAnswers,
+      studentAnswers,
+      isCorrected: true,
+      questionErrorReasons,
+      questions,
+      downloadedAt: new Date().toISOString().split('T')[0],
+    };
+
+    setDownloadedExams((prev) => [newExam, ...prev]);
+    notifySuccess(
+      'Prova importada e adicionada à lista!',
+      `${result.matched} questões reconhecidas de ${result.totalQuestions}. Disponível para consulta.`
+    );
   };
 
   // DISPARAR SELEÇÃO DE ARQUIVO DO PC
@@ -609,47 +666,27 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
 
   // CORRIGIR GABARITO E ANALISAR UMA PROVA
   const handleCorrectExam = (examId: string) => {
+    // NÃO fabrica respostas. Apenas marca a prova como corrigida, preservando o
+    // estado real de cada questão (isCorrect vindo da importação/marcação
+    // manual). Questões sem estado definido entram como ACERTO (padrão
+    // otimista); a Leticia marca os erros na própria tela.
     setDownloadedExams((prev) =>
       prev.map((ex) => {
         if (ex.id !== examId) return ex;
-
-        // Se o usuário ainda não respondeu nada, preenche um padrão para análise
-        const currentAnswers = { ...ex.studentAnswers };
-        const hasAnswers = Object.keys(currentAnswers).length > 0;
-        const letters = ['A', 'B', 'C', 'D', 'E'];
-
-        if (!hasAnswers) {
-          for (let i = 1; i <= 100; i++) {
-            const correctOpt = ex.officialAnswers[i] || 'A';
-            const willHit = (i * 7) % 100 < 80;
-            if (willHit) {
-              currentAnswers[i] = correctOpt;
-            } else {
-              const wrong = letters.filter((l) => l !== correctOpt);
-              currentAnswers[i] = wrong[i % wrong.length];
-            }
-          }
-        }
-
         const defaultReasons: { [q: number]: ErrorReasonType } = { ...ex.questionErrorReasons };
-
         const updatedQuestions = ex.questions.map((q) => {
-          const studentAns = currentAnswers[q.questionNumber];
-          const officialAns = ex.officialAnswers[q.questionNumber] || 'A';
-          const isHit = studentAns === officialAns;
-          if (!isHit && !defaultReasons[q.questionNumber]) {
-            defaultReasons[q.questionNumber] = 'entre_duas';
+          const isCorrect = q.isCorrect !== false; // undefined/true -> acerto
+          if (!isCorrect && !defaultReasons[q.questionNumber]) {
+            defaultReasons[q.questionNumber] = 'nao_sabia';
           }
           return {
             ...q,
-            isCorrect: isHit,
-            errorReason: isHit ? undefined : defaultReasons[q.questionNumber],
+            isCorrect,
+            errorReason: isCorrect ? undefined : defaultReasons[q.questionNumber],
           };
         });
-
         return {
           ...ex,
-          studentAnswers: currentAnswers,
           isCorrected: true,
           questionErrorReasons: defaultReasons,
           questions: updatedQuestions,
@@ -658,8 +695,8 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
     );
 
     notifySuccess(
-      'Gabarito corrigido e analisado!',
-      'Relatório de acurácia, domínio por área e classificação de erros gerados.'
+      'Gabarito analisado!',
+      'Marque os erros e os motivos nas questões; depois use "Salvar no Desempenho".'
     );
   };
 
@@ -732,35 +769,74 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
 
   // RETROALIMENTAR CADERNO DE ERROS E CURRÍCULO
   const handleFeedCurriculumAndCaderno = (exam: DownloadedExam) => {
-    try {
-      const existingCadernoStr = localStorage.getItem('synapsemed_caderno_erros');
-      const existingCaderno: CadernoErroItem[] = existingCadernoStr ? JSON.parse(existingCadernoStr) : [];
-
-      const wrongQuestions = exam.questions.filter((q) => !q.isCorrect);
-      const newItems: CadernoErroItem[] = wrongQuestions.map((q) => {
-        const cat = exam.questionErrorReasons[q.questionNumber] || 'entre_duas';
-        return {
-          id: `err-${Date.now()}-${q.questionNumber}`,
-          topic: `${q.contentName} (Q${q.questionNumber})`,
-          specialty: q.areaName,
-          reason: q.statementSnippet,
-          reasonCategory: cat,
-          institutionOrContext: `${exam.institution} ${exam.year} (${exam.type === 'PROVA_REAL' ? 'Prova Real' : 'Simulado'})`,
-          createdAt: new Date().toISOString().split('T')[0],
-          examType: exam.type,
-        };
-      });
-
-      const combined = [...newItems, ...existingCaderno];
-      localStorage.setItem('synapsemed_caderno_erros', JSON.stringify(combined));
-
+    // "Salvar no Desempenho": escrita ÚNICA a partir do estado final da prova
+    // (acertos/erros já corrigidos na tela). Usa os callbacks do App
+    // (onAddEvidence/onAddCadernoErro) — mesma fonte de verdade do resto do app.
+    if (savedToDesempenho.has(exam.id)) {
       notifySuccess(
-        'Caderno de Erros Alimentado!',
-        `${wrongQuestions.length} questões com motivos classificados foram registradas para revisão clínica.`
+        'Esta prova já foi salva no Desempenho',
+        'Para evitar contagem dupla, cada prova alimenta o Desempenho uma vez. Edite direto no caderno se precisar.'
       );
-    } catch (e) {
-      console.error('Erro ao retroalimentar:', e);
+      return;
     }
+
+    const today = new Date().toISOString().split('T')[0];
+    const source = `${exam.institution} ${exam.year}`.trim();
+    let evid = 0;
+    let erros = 0;
+
+    exam.questions.forEach((q) => {
+      if (!q.contentId) return; // sem conteúdo casado: não entra
+      // Evidência para TODAS as questões (acerto e erro).
+      onAddEvidence?.({
+        id: `ev-exam-${exam.id}-${q.questionNumber}`,
+        contentId: q.contentId,
+        date: today,
+        kind: 'questoes',
+        questionsTotal: 1,
+        questionsCorrect: q.isCorrect ? 1 : 0,
+        durationMinutes: 0,
+        source,
+      });
+      evid++;
+
+      if (!q.isCorrect) {
+        const cat = exam.questionErrorReasons[q.questionNumber] || 'nao_sabia';
+        onAddCadernoErro?.({
+          id: `err-exam-${exam.id}-${q.questionNumber}`,
+          topic: q.contentName || `Questão ${q.questionNumber}`,
+          specialty: q.areaName || '',
+          reason: q.statementSnippet || `Questão ${q.questionNumber}`,
+          reasonCategory: cat,
+          institutionOrContext: `${source} (${exam.type === 'PROVA_REAL' ? 'Prova Real' : 'Simulado'})`,
+          createdAt: today,
+          examType: exam.type,
+        });
+        erros++;
+      }
+    });
+
+    setSavedToDesempenho((prev) => new Set(prev).add(exam.id));
+    notifySuccess(
+      'Prova salva no Desempenho!',
+      `${evid} questões alimentaram o cronograma${erros > 0 ? ` e ${erros} foram ao caderno de erros` : ''}.`
+    );
+  };
+
+  // ALTERNAR ACERTO/ERRO DE UMA QUESTÃO (marcação manual na tela)
+  const handleToggleQuestionCorrect = (qNum: number) => {
+    if (!selectedExamId) return;
+    setDownloadedExams((prev) =>
+      prev.map((ex) => {
+        if (ex.id !== selectedExamId) return ex;
+        return {
+          ...ex,
+          questions: ex.questions.map((q) =>
+            q.questionNumber === qNum ? { ...q, isCorrect: !q.isCorrect } : q
+          ),
+        };
+      })
+    );
   };
 
   // ABRIR QUESTÕES DE UM SIMULADO
@@ -773,12 +849,13 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
 
   // CÁLCULOS DO EXAME ABERTO
   const activeExam = currentExam;
-  const totalQ = activeExam ? activeExam.questions.length : 100;
+  const totalQ = activeExam ? activeExam.questions.length : 0;
   const answeredQ = activeExam ? Object.keys(activeExam.studentAnswers).length : 0;
+  // Acertos vêm do flag isCorrect de cada questão (fonte da verdade),
+  // e NÃO de comparar studentAnswers vs officialAnswers (que gerava valores
+  // aleatórios em provas importadas sem folha de respostas preenchida).
   const hitsQ = activeExam && activeExam.isCorrected
-    ? activeExam.questions.filter(
-        (q) => activeExam.studentAnswers[q.questionNumber] === (activeExam.officialAnswers[q.questionNumber] || 'A')
-      ).length
+    ? activeExam.questions.filter((q) => q.isCorrect).length
     : 0;
   const missesQ = activeExam && activeExam.isCorrected ? totalQ - hitsQ : 0;
   const accuracyPct = totalQ > 0 ? Math.round((hitsQ / totalQ) * 100) : 0;
@@ -793,11 +870,7 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
   ].map((areaName) => {
     const areaQuestions = activeExam ? activeExam.questions.filter((q) => q.areaName.toUpperCase() === areaName) : [];
     const total = areaQuestions.length;
-    const hits = activeExam
-      ? areaQuestions.filter(
-          (q) => activeExam.studentAnswers[q.questionNumber] === (activeExam.officialAnswers[q.questionNumber] || 'A')
-        ).length
-      : 0;
+    const hits = areaQuestions.filter((q) => q.isCorrect).length;
     const percent = total > 0 ? Math.round((hits / total) * 100) : 0;
     return { areaName, total, hits, percent };
   });
@@ -812,9 +885,7 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
           return false;
         }
         if (activeExam.isCorrected) {
-          const isHit =
-            activeExam.studentAnswers[q.questionNumber] ===
-            (activeExam.officialAnswers[q.questionNumber] || 'A');
+          const isHit = q.isCorrect;
           if (gabaritoStatusFilter === 'ACERTOS' && !isHit) return false;
           if (gabaritoStatusFilter === 'ERROS' && isHit) return false;
         }
@@ -852,6 +923,12 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
 
         <div className="flex items-start gap-2.5">
           <button
+            onClick={() => setShowImportIA((v) => !v)}
+            className="px-4 py-2 rounded-lg bg-indigo-700 text-white font-medium text-sm whitespace-nowrap"
+          >
+            {showImportIA ? 'Fechar importação' : '🤖 Importar resultado da IA'}
+          </button>
+          <button
             onClick={() => setShowManualRegistro((v) => !v)}
             className="px-4 py-2 rounded-lg bg-primary text-white font-medium text-sm whitespace-nowrap"
           >
@@ -859,6 +936,17 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
           </button>
         </div>
       </div>
+
+      {showImportIA && (
+        <div className="p-4 sm:p-6 rounded-2xl border border-surface-container bg-surface-container-lowest">
+          <ImportarProvaIA
+            onFinish={() => setShowImportIA(false)}
+            onAddEvidence={(r) => onAddEvidence?.(r)}
+            onAddCadernoErro={(i) => onAddCadernoErro?.(i)}
+            onCreateExam={handleCreateExamFromImport}
+          />
+        </div>
+      )}
 
       {showManualRegistro && (
         <div className="p-4 sm:p-6 rounded-2xl border border-surface-container bg-surface-container-lowest">
@@ -1352,7 +1440,7 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
                         title="Abre a folha de 100 questões com alternativas e classificação de erros"
                       >
                         <span className="material-symbols-outlined text-base">visibility</span>
-                        <span>Ver Questões (100)</span>
+                        <span>Ver Questões ({exam.totalQuestions})</span>
                       </button>
 
                       {/* Ações Rápidas: Corrigir, Limpar e Remover */}
@@ -1494,10 +1582,17 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
 
                   <button
                     onClick={() => handleFeedCurriculumAndCaderno(activeExam)}
-                    className="px-4 py-2 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-all flex items-center gap-1.5 shadow-sm self-start sm:self-auto active:scale-98 cursor-pointer"
+                    disabled={savedToDesempenho.has(activeExam.id)}
+                    className="px-4 py-2 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-all flex items-center gap-1.5 shadow-sm self-start sm:self-auto active:scale-98 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <span className="material-symbols-outlined text-sm">sync</span>
-                    <span>Retroalimentar Currículo &amp; Caderno de Erros</span>
+                    <span className="material-symbols-outlined text-sm">
+                      {savedToDesempenho.has(activeExam.id) ? 'check' : 'sync'}
+                    </span>
+                    <span>
+                      {savedToDesempenho.has(activeExam.id)
+                        ? 'Salvo no Desempenho'
+                        : 'Salvar no Desempenho'}
+                    </span>
                   </button>
                 </div>
 
@@ -1559,7 +1654,7 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
                     }`}
                   >
                     {area === 'TODAS'
-                      ? 'Todas (100)'
+                      ? `Todas (${totalQ})`
                       : area === 'CLÍNICA MÉDICA'
                       ? 'Clínica'
                       : area === 'CIRURGIA GERAL'
@@ -1614,10 +1709,12 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {filteredQuestions.map((q) => {
               const selectedOpt = activeExam.studentAnswers[q.questionNumber];
-              const officialOpt = activeExam.officialAnswers[q.questionNumber] || 'A';
-              const isHit = activeExam.isCorrected && selectedOpt === officialOpt;
-              const isMiss = activeExam.isCorrected && selectedOpt && selectedOpt !== officialOpt;
-              const isBlank = activeExam.isCorrected && !selectedOpt;
+              const officialOpt = activeExam.officialAnswers[q.questionNumber] || '';
+              // Acerto/erro vêm do flag isCorrect (fonte da verdade), não da
+              // comparação de alternativas — que não existe em prova importada.
+              const isHit = activeExam.isCorrected && q.isCorrect;
+              const isMiss = activeExam.isCorrected && !q.isCorrect;
+              const isBlank = false;
               const currentReason = activeExam.questionErrorReasons[q.questionNumber] || 'entre_duas';
 
               return (
@@ -1674,18 +1771,20 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
                       )}
                     </div>
 
-                    {/* Status de Correção */}
+                    {/* Status de Correção — clique para alternar acerto/erro */}
                     {activeExam.isCorrected && (
                       <div className="shrink-0 text-right">
-                        {isHit ? (
-                          <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-900 text-xs font-bold flex items-center gap-1">
-                            <span>✅ Acerto</span>
-                          </span>
-                        ) : (
-                          <span className="px-2.5 py-1 rounded-lg bg-rose-100 text-rose-900 text-xs font-bold flex items-center gap-1">
-                            <span>❌ Erro</span>
-                          </span>
-                        )}
+                        <button
+                          onClick={() => handleToggleQuestionCorrect(q.questionNumber)}
+                          title="Clique para alternar entre acerto e erro"
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer ${
+                            isHit
+                              ? 'bg-emerald-100 text-emerald-900 hover:bg-emerald-200'
+                              : 'bg-rose-100 text-rose-900 hover:bg-rose-200'
+                          }`}
+                        >
+                          <span>{isHit ? '✅ Acerto' : '❌ Erro'}</span>
+                        </button>
                       </div>
                     )}
                   </div>

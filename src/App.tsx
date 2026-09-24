@@ -401,6 +401,7 @@ export default function App() {
               onNavigateToPlanejamento={() => setCurrentPath('planejamento')}
               onNavigateToCurriculo={() => setCurrentPath('curriculo')}
               onContentStudied={handleContentStudied}
+              curriculum={studiedCurriculum}
             />
           )}
 
@@ -445,7 +446,9 @@ export default function App() {
             />
           )}
 
-          {currentPath === 'analises' && <AnalisesView cadernoErros={cadernoErros} />}
+          {currentPath === 'analises' && (
+            <AnalisesView cadernoErros={cadernoErros} curriculum={studiedCurriculum} />
+          )}
 
           {currentPath === 'configuracoes' && (
             <ConfiguracoesView

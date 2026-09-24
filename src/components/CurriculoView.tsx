@@ -47,8 +47,8 @@ export const CurriculoView: React.FC<CurriculoViewProps> = ({
   // Hierarquia efetiva: overlay real quando fornecido, senão o estático.
   const curriculumHierarchy: AreaItem[] = curriculum ?? fullCurriculumHierarchy;
   const [activeTab, setActiveTab] = useState<'arvore' | 'mapeamento' | 'banco-relacional'>('arvore');
-  const [selectedAreaId, setSelectedAreaId] = useState<string>('clinica');
-  const [expandedContentId, setExpandedContentId] = useState<string | null>('c-icc');
+  const [selectedAreaId, setSelectedAreaId] = useState<string>('mod-clinica-medica');
+  const [expandedContentId, setExpandedContentId] = useState<string | null>('c-insuficiencia-cardiaca');
   const [searchFilter, setSearchFilter] = useState('');
 
   // Modal do Cérebro de Domínio (4 Dimensões: Conhecimento, Aplicação, Retenção, Confiança)
@@ -626,7 +626,7 @@ export const CurriculoView: React.FC<CurriculoViewProps> = ({
                   <span className="material-symbols-outlined absolute left-2.5 top-2 text-secondary text-sm">search</span>
                   <input
                     type="text"
-                    placeholder="Buscar conteúdo ou módulo..."
+                    placeholder="Buscar conteúdo ou tópico Osler..."
                     value={searchFilter}
                     onChange={(e) => setSearchFilter(e.target.value)}
                     className="w-full h-8 pl-8 pr-3 text-xs bg-surface-container-low rounded-lg border border-surface-container focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -650,25 +650,11 @@ export const CurriculoView: React.FC<CurriculoViewProps> = ({
 
                 return (
                   <div key={modulo.id} className="space-y-3">
-                    {/* Module Header */}
-                    <div className="flex items-center justify-between bg-surface-container-low/70 px-4 py-2.5 rounded-xl border border-surface-container">
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-primary text-base">folder_open</span>
-                        <span className="text-xs font-bold text-on-surface uppercase tracking-wide">
-                          Módulo: {modulo.name}
-                        </span>
-                        <span className="px-2 py-0.5 rounded-md bg-surface-container text-secondary text-[0.625rem] font-code-metric font-medium">
-                          {modulo.studiedContents}/{modulo.totalContents} concluídos
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="text-secondary text-[0.6875rem]">Domínio do Módulo:</span>
-                        <span className="font-code-metric font-bold text-primary">{modulo.avgMastery}%</span>
-                      </div>
-                    </div>
+                    {/* Estrutura achatada: o módulo já é o nível selecionado
+                        acima, então não repetimos um cabeçalho de módulo aqui. */}
 
                     {/* Contents within Module */}
-                    <div className="space-y-2.5 pl-2 sm:pl-4">
+                    <div className="space-y-2.5">
                       {filteredContents.map((rawContent) => {
                         const content: ContentItem = {
                           ...rawContent,

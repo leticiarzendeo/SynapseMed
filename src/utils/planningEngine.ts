@@ -174,7 +174,7 @@ export const CANONICAL_PLANNING_ACTIVITIES: PlanningActivityItem[] = [
   // SEGUNDA (Total: 80 min / 1h20)
   {
     id: 'act-icc-teoria-sem1',
-    contentId: 'c-icc',
+    contentId: 'c-insuficiencia-cardiaca',
     name: 'Insuficiência Cardíaca Congestiva (ICC)',
     subType: 'Teoria Medway (Bloco 1/2)',
     type: 'teoria',
@@ -194,7 +194,7 @@ export const CANONICAL_PLANNING_ACTIVITIES: PlanningActivityItem[] = [
   },
   {
     id: 'act-icc-pos-sem1',
-    contentId: 'c-icc',
+    contentId: 'c-insuficiencia-cardiaca',
     name: 'Insuficiência Cardíaca Congestiva (ICC)',
     subType: 'Exercícios pós-aula imediatos',
     type: 'exercicios_pos',
@@ -217,7 +217,7 @@ export const CANONICAL_PLANNING_ACTIVITIES: PlanningActivityItem[] = [
   // TERÇA (Total: 100 min / 1h40 - Dia de Bloco Denso)
   {
     id: 'act-dpoc-teoria-sem1',
-    contentId: 'c-dpoc',
+    contentId: 'c-disturbios-obstrutivos',
     name: 'Doença Pulmonar Obstrutiva Crônica (DPOC)',
     subType: 'Teoria Medway (Bloco Completo)',
     type: 'teoria',
@@ -237,7 +237,7 @@ export const CANONICAL_PLANNING_ACTIVITIES: PlanningActivityItem[] = [
   },
   {
     id: 'act-dpoc-pos-sem1',
-    contentId: 'c-dpoc',
+    contentId: 'c-disturbios-obstrutivos',
     name: 'Doença Pulmonar Obstrutiva Crônica (DPOC)',
     subType: 'Exercícios pós-aula comentados',
     type: 'exercicios_pos',
@@ -258,7 +258,7 @@ export const CANONICAL_PLANNING_ACTIVITIES: PlanningActivityItem[] = [
   },
   {
     id: 'act-osler-primeiro-lote',
-    contentId: 'c-icc',
+    contentId: 'c-insuficiencia-cardiaca',
     name: 'Primeiro Lote de Flashcards Osler',
     subType: 'Ativação inicial do algoritmo FSRS',
     type: 'osler',
@@ -280,7 +280,7 @@ export const CANONICAL_PLANNING_ACTIVITIES: PlanningActivityItem[] = [
   // QUARTA (Total: 60 min / 1h00)
   {
     id: 'act-atls-teoria-sem1',
-    contentId: 'c-trauma-atls',
+    contentId: 'c-trauma-abdominal',
     name: 'ATLS 10ª Ed — Choque no Trauma & ABCDE',
     subType: 'Teoria Medway + Protocolos',
     type: 'teoria',
@@ -300,7 +300,7 @@ export const CANONICAL_PLANNING_ACTIVITIES: PlanningActivityItem[] = [
   },
   {
     id: 'act-atls-pos-sem1',
-    contentId: 'c-trauma-atls',
+    contentId: 'c-trauma-abdominal',
     name: 'ATLS 10ª Ed — Choque no Trauma & ABCDE',
     subType: 'Exercícios de fixação de classes de choque',
     type: 'exercicios_pos',
@@ -323,7 +323,7 @@ export const CANONICAL_PLANNING_ACTIVITIES: PlanningActivityItem[] = [
   // QUINTA (Total: 40 min / 0h40 - Dia Curto: Atividades Rápidas)
   {
     id: 'act-fixacao-quinta',
-    contentId: 'c-icc',
+    contentId: 'c-insuficiencia-cardiaca',
     name: 'Bateria Rápida de Fixação (Cardio + Pneumo)',
     subType: '15 questões de raciocínio direto',
     type: 'questoes_prova',
@@ -345,7 +345,7 @@ export const CANONICAL_PLANNING_ACTIVITIES: PlanningActivityItem[] = [
   // SEXTA (Total: 60 min / 1h00)
   {
     id: 'act-dheg-teoria-sem1',
-    contentId: 'c-dheg',
+    contentId: 'c-sindromes-hipertensivas-da-gestacao',
     name: 'Síndromes Hipertensivas na Gestação & Pré-Eclâmpsia',
     subType: 'Teoria Medway + Critérios de Gravidade',
     type: 'teoria',
@@ -365,7 +365,7 @@ export const CANONICAL_PLANNING_ACTIVITIES: PlanningActivityItem[] = [
   },
   {
     id: 'act-dheg-pos-sem1',
-    contentId: 'c-dheg',
+    contentId: 'c-sindromes-hipertensivas-da-gestacao',
     name: 'Síndromes Hipertensivas na Gestação & Pré-Eclâmpsia',
     subType: 'Exercícios de sulfato de magnésio e condutas',
     type: 'exercicios_pos',

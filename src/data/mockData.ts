@@ -129,7 +129,7 @@ export const initialWeeklyPlans: WeeklyCapacityPlan[] = [
 export const initialActivities: StudyActivity[] = [
   {
     id: 'icc-theory-session',
-    contentId: 'c-icc',
+    contentId: 'c-insuficiencia-cardiaca',
     title: 'ICC — Insuficiência Cardíaca Congestiva',
     specialty: 'Clínica Médica',
     subspecialty: 'Cardiologia',
@@ -156,7 +156,7 @@ export const initialActivities: StudyActivity[] = [
   },
   {
     id: 'dpoc-theory-session',
-    contentId: 'c-dpoc',
+    contentId: 'c-disturbios-obstrutivos',
     title: 'DPOC — Doença Pulmonar Obstrutiva Crônica',
     specialty: 'Clínica Médica',
     subspecialty: 'Pneumologia',
@@ -183,7 +183,7 @@ export const initialActivities: StudyActivity[] = [
   },
   {
     id: 'atls-theory-session',
-    contentId: 'c-trauma-atls',
+    contentId: 'c-trauma-abdominal',
     title: 'ATLS 10ª Ed — Atendimento Inicial & Choque no Trauma',
     specialty: 'Cirurgia Geral',
     subspecialty: 'Trauma & Urgências',
@@ -298,12 +298,12 @@ export const mockExamSubmissions: ExamSubmission[] = [
         id: 'q-enare-14',
         questionNumber: 14,
         statementSnippet: 'Paciente de 68 anos com ICFER classe III NYHA e ritmo sinusal mantendo sintomas com IECA e Betabloqueador em dose máxima tolerada...',
-        contentId: 'c-icc',
+        contentId: 'c-insuficiencia-cardiaca',
         contentName: 'Insuficiência Cardíaca Congestiva (ICC)',
         moduloName: 'Cardiologia',
         areaName: 'Clínica Médica',
         isCorrect: true,
-        aiSuggestedContentId: 'c-icc',
+        aiSuggestedContentId: 'c-insuficiencia-cardiaca',
       },
       {
         id: 'q-enare-22',
@@ -333,12 +333,12 @@ export const mockExamSubmissions: ExamSubmission[] = [
         id: 'q-58',
         questionNumber: 58,
         statementSnippet: 'Primigesta de 32 semanas admitida com PA 165x110 mmHg, cefaleia refratária e escotomas cintilantes...',
-        contentId: 'c-dheg',
+        contentId: 'c-sindromes-hipertensivas-da-gestacao',
         contentName: 'Síndromes Hipertensivas na Gestação & Pré-Eclâmpsia',
         moduloName: 'Obstetrícia Geral & Alto Risco',
         areaName: 'Ginecologia e Obstetrícia',
         isCorrect: true,
-        aiSuggestedContentId: 'c-dheg',
+        aiSuggestedContentId: 'c-sindromes-hipertensivas-da-gestacao',
       },
       {
         id: 'q-74',
