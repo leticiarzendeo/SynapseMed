@@ -1,53 +1,71 @@
 import React, { useMemo, useState } from 'react';
-import { AreaItem } from '../types';
+import { AreaItem, ContentItem } from '../types';
 import { fullCurriculumHierarchy } from '../data/mockData';
 import {
   groupPriorityByArea,
   medwayInstitutionTotals,
   medwayTotalPriorityFocos,
-  isMedwayPriority,
 } from '../utils/medwayPriorityEngine';
+import { getContentState, CONTENT_STATE_UI, ContentState } from '../utils/contentState';
 
 // ============================================================================
 // PrioridadesView
 // ----------------------------------------------------------------------------
-// Mostra os focos PRIORITÁRIOS da Medway (nível Prioritário, todas as
-// instituições-alvo) que foram importados do app da Medway. Serve de consulta
-// e deixa explícito que o algoritmo de estudos usa essa prioridade.
-//
-// Recebe opcionalmente o currículo sobreposto (com isStudied real) para marcar
-// quais focos prioritários você já estudou.
+// Focos PRIORITÁRIOS da Medway com o ESTADO REAL de cada conteúdo, em 3 níveis,
+// usando calculateContentDomain (NÃO o isStudied frouxo):
+//   - "não iniciado": sem evidência real
+//   - "em andamento": tem contato, mas não atingiu domínio seguro
+//   - "dominado": consolidado (domínio>=85, aplicação>=80, retenção>=80,
+//     confiança suficiente). Uma questão acertada NÃO conta como dominado.
 // ============================================================================
 
 interface PrioridadesViewProps {
   curriculum?: AreaItem[];
 }
 
+
+
+
 export const PrioridadesView: React.FC<PrioridadesViewProps> = ({ curriculum }) => {
   const hierarchy = curriculum ?? fullCurriculumHierarchy;
   const groups = useMemo(() => groupPriorityByArea(), []);
   const [openArea, setOpenArea] = useState<string | null>(groups[0]?.area ?? null);
 
-  // conjunto de contentIds já estudados (para mostrar progresso nos focos)
-  const studied = useMemo(() => {
-    const s = new Set<string>();
+  const contentById = useMemo(() => {
+    const map = new Map<string, ContentItem>();
     for (const a of hierarchy)
       for (const m of a.modules)
-        for (const c of m.contents) if (c.isStudied) s.add(c.id);
-    return s;
+        for (const c of m.contents) map.set(c.id, c);
+    return map;
   }, [hierarchy]);
 
-  const studiedPriority = useMemo(() => {
-    let n = 0;
+  const estadoPorContent = useMemo(() => {
+    const map = new Map<string, ContentState>();
     for (const g of groups)
       for (const t of g.temas)
-        for (const f of t.focos) if (studied.has(f.contentId)) n++;
-    return n;
-  }, [groups, studied]);
+        for (const f of t.focos)
+          if (!map.has(f.contentId))
+            map.set(f.contentId, getContentState(contentById.get(f.contentId)));
+    return map;
+  }, [groups, contentById]);
+
+  const contagem = useMemo(() => {
+    let dominado = 0;
+    let andamento = 0;
+    let naoIniciado = 0;
+    for (const g of groups)
+      for (const t of g.temas)
+        for (const f of t.focos) {
+          const e = estadoPorContent.get(f.contentId) ?? 'nao_iniciado';
+          if (e === 'dominado') dominado++;
+          else if (e === 'em_andamento') andamento++;
+          else naoIniciado++;
+        }
+    return { dominado, andamento, naoIniciado };
+  }, [groups, estadoPorContent]);
 
   return (
     <div className="flex flex-col w-full px-4 sm:px-8 py-6 max-w-5xl mx-auto space-y-6">
-      {/* Cabeçalho */}
       <div>
         <div className="flex items-center gap-2 text-secondary text-xs">
           <span className="material-symbols-outlined text-base">flag</span>
@@ -55,75 +73,55 @@ export const PrioridadesView: React.FC<PrioridadesViewProps> = ({ curriculum }) 
           <span className="text-outline-variant">•</span>
           <span className="text-primary font-medium">Incidência das instituições-alvo</span>
         </div>
-        <h1 className="text-2xl font-bold text-on-surface mt-1">
-          Focos Prioritários
-        </h1>
+        <h1 className="text-2xl font-bold text-on-surface mt-1">Focos Prioritários</h1>
         <p className="text-sm text-secondary mt-1">
           {medwayTotalPriorityFocos} focos classificados como <strong>Prioritário</strong> pela
-          Medway, considerando todas as suas instituições-alvo (USP-RP, USP-SP, UNICAMP, ENAMED e
-          Einstein). O algoritmo de estudos usa esta lista para priorizar seu cronograma e suas
-          revisões.
+          Medway (todas as suas instituições-alvo). O estado de cada foco reflete seu{' '}
+          <strong>domínio real</strong> — “dominado” exige consolidação (teoria, questões,
+          retenção e confiança), não apenas uma questão feita.
         </p>
       </div>
 
-      {/* Resumo */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="p-4 rounded-xl border border-surface-container bg-surface-container-lowest">
-          <div className="text-2xl font-bold text-primary">{medwayTotalPriorityFocos}</div>
-          <div className="text-xs text-secondary">focos prioritários</div>
-        </div>
-        <div className="p-4 rounded-xl border border-surface-container bg-surface-container-lowest">
-          <div className="text-2xl font-bold text-emerald-700">{studiedPriority}</div>
-          <div className="text-xs text-secondary">já estudados</div>
-        </div>
-        <div className="p-4 rounded-xl border border-surface-container bg-surface-container-lowest">
-          <div className="text-2xl font-bold text-on-surface">
-            {medwayTotalPriorityFocos - studiedPriority}
-          </div>
-          <div className="text-xs text-secondary">a estudar</div>
-        </div>
-        <div className="p-4 rounded-xl border border-surface-container bg-surface-container-lowest">
-          <div className="text-2xl font-bold text-on-surface">
-            {Math.round((studiedPriority / medwayTotalPriorityFocos) * 100)}%
-          </div>
-          <div className="text-xs text-secondary">do prioritário</div>
-        </div>
+        <Resumo valor={medwayTotalPriorityFocos} rotulo="focos prioritários" cor="var(--primary,#2563eb)" />
+        <Resumo valor={contagem.dominado} rotulo="dominados" cor="#16a34a" />
+        <Resumo valor={contagem.andamento} rotulo="em andamento" cor="#d97706" />
+        <Resumo valor={contagem.naoIniciado} rotulo="não iniciados" cor="#94a3b8" />
       </div>
 
-      {/* Totais por instituição (informativo) */}
+      <div className="flex flex-wrap gap-4 text-xs text-secondary">
+        {(['dominado', 'em_andamento', 'nao_iniciado'] as ContentState[]).map((e) => (
+          <span key={e} className="flex items-center gap-1">
+            <span className="material-symbols-outlined text-base" style={{ color: CONTENT_STATE_UI[e].color }}>
+              {CONTENT_STATE_UI[e].icon}
+            </span>
+            {CONTENT_STATE_UI[e].label}
+          </span>
+        ))}
+      </div>
+
       <div className="p-4 rounded-xl border border-surface-container bg-surface-container-low/50">
         <div className="text-xs font-semibold text-on-surface mb-2">
           Focos prioritários por instituição
         </div>
         <div className="flex flex-wrap gap-2">
           {medwayInstitutionTotals.map((i) => (
-            <span
-              key={i.sigla}
-              className="px-3 py-1 rounded-full bg-surface-container text-xs text-on-surface"
-            >
+            <span key={i.sigla} className="px-3 py-1 rounded-full bg-surface-container text-xs text-on-surface">
               <strong>{i.sigla}</strong>: {i.focos}
             </span>
           ))}
         </div>
-        <p className="text-[0.6875rem] text-secondary mt-2">
-          Esta aba lista o consolidado <em>Todas as instituições</em>. Os totais por instituição
-          acima são informativos; a priorização usa a lista consolidada.
-        </p>
       </div>
 
-      {/* Lista por área > tema > foco */}
       <div className="space-y-3">
         {groups.map((g) => {
           const open = openArea === g.area;
-          const studiedInArea = g.temas.reduce(
-            (s, t) => s + t.focos.filter((f) => studied.has(f.contentId)).length,
+          const dominadosArea = g.temas.reduce(
+            (s, t) => s + t.focos.filter((f) => estadoPorContent.get(f.contentId) === 'dominado').length,
             0
           );
           return (
-            <div
-              key={g.area}
-              className="rounded-xl border border-surface-container bg-surface-container-lowest overflow-hidden"
-            >
+            <div key={g.area} className="rounded-xl border border-surface-container bg-surface-container-lowest overflow-hidden">
               <button
                 onClick={() => setOpenArea(open ? null : g.area)}
                 className="w-full flex items-center justify-between px-4 py-3 text-left"
@@ -131,7 +129,7 @@ export const PrioridadesView: React.FC<PrioridadesViewProps> = ({ curriculum }) 
                 <div>
                   <span className="font-semibold text-on-surface">{g.area}</span>
                   <span className="ml-2 text-xs text-secondary">
-                    {g.totalFocos} focos prioritários • {studiedInArea} estudados
+                    {g.totalFocos} focos • {dominadosArea} dominados
                   </span>
                 </div>
                 <span className="material-symbols-outlined text-secondary">
@@ -148,24 +146,19 @@ export const PrioridadesView: React.FC<PrioridadesViewProps> = ({ curriculum }) 
                       </div>
                       <div className="space-y-1">
                         {t.focos.map((f) => {
-                          const done = studied.has(f.contentId);
+                          const estado = estadoPorContent.get(f.contentId) ?? 'nao_iniciado';
+                          const ui = CONTENT_STATE_UI[estado];
                           return (
-                            <div
-                              key={f.foco + f.contentId}
-                              className="flex items-center gap-2 text-sm"
-                            >
-                              <span
-                                className={`material-symbols-outlined text-base ${
-                                  done ? 'text-emerald-600' : 'text-outline-variant'
-                                }`}
-                              >
-                                {done ? 'check_circle' : 'radio_button_unchecked'}
+                            <div key={f.foco + f.contentId} className="flex items-center gap-2 text-sm">
+                              <span className="material-symbols-outlined text-base" style={{ color: ui.color }}>
+                                {ui.icon}
                               </span>
-                              <span
-                                className={done ? 'text-secondary line-through' : 'text-on-surface'}
-                              >
+                              <span className={estado === 'dominado' ? 'text-secondary line-through' : 'text-on-surface'}>
                                 {f.foco}
                               </span>
+                              {estado === 'em_andamento' && (
+                                <span className="text-[0.625rem] text-amber-600">• em andamento</span>
+                              )}
                             </div>
                           );
                         })}
@@ -180,9 +173,16 @@ export const PrioridadesView: React.FC<PrioridadesViewProps> = ({ curriculum }) 
       </div>
 
       <p className="text-xs text-secondary">
-        Importado do app da Medway em seu último dia de acesso. Estes dados de incidência não mudam
-        sozinhos; se um dia você tiver novas listas, elas podem ser adicionadas.
+        “Dominado” usa os mesmos critérios de consolidação do app (domínio ≥ 85%, aplicação ≥ 80%,
+        retenção ≥ 80% e confiança suficiente). Fazer poucas questões deixa o foco em “em andamento”.
       </p>
     </div>
   );
 };
+
+const Resumo: React.FC<{ valor: number; rotulo: string; cor: string }> = ({ valor, rotulo, cor }) => (
+  <div className="p-4 rounded-xl border border-surface-container bg-surface-container-lowest">
+    <div className="text-2xl font-bold" style={{ color: cor }}>{valor}</div>
+    <div className="text-xs text-secondary">{rotulo}</div>
+  </div>
+);

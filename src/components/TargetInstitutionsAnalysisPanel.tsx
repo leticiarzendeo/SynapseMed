@@ -53,7 +53,7 @@ export const TargetInstitutionsAnalysisPanel: React.FC<TargetInstitutionsAnalysi
   const [editingQuestion, setEditingQuestion] = useState<ExamQuestionEntry | null>(null);
   const [manualArea, setManualArea] = useState('Clínica Médica');
   const [manualModule, setManualModule] = useState('Pneumologia');
-  const [manualContentId, setManualContentId] = useState('c-dpoc');
+  const [manualContentId, setManualContentId] = useState('c-disturbios-obstrutivos');
   const [manualCorrectionNote, setManualCorrectionNote] = useState('');
 
   // Notificação de sucesso
@@ -134,7 +134,7 @@ export const TargetInstitutionsAnalysisPanel: React.FC<TargetInstitutionsAnalysi
     setEditingQuestion(q);
     setManualArea(q.areaName || 'Clínica Médica');
     setManualModule(q.moduloName || 'Pneumologia');
-    setManualContentId(q.contentId || 'c-dpoc');
+    setManualContentId(q.contentId || 'c-disturbios-obstrutivos');
     setManualCorrectionNote(q.userCorrectionNote || '');
   };
 

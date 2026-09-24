@@ -16,7 +16,7 @@ export const BancoRelacionalView: React.FC = () => {
     | 'weekly_plans'
   >('contents');
 
-  const [simulatingContentId, setSimulatingContentId] = useState<string>('c-dpoc');
+  const [simulatingContentId, setSimulatingContentId] = useState<string>('c-disturbios-obstrutivos');
   const [simulationLog, setSimulationLog] = useState<string[]>([]);
 
   const fourTimes = db.getFourTimesMetrics();

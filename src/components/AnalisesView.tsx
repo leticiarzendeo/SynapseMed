@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
-import { errorReasonConfig, initialCadernoErros, fullCurriculumHierarchy, getCurriculumTotals } from '../data/mockData';
-import { ErrorReasonType } from '../types';
+import { errorReasonConfig, initialCadernoErros, fullCurriculumHierarchy } from '../data/mockData';
+import { getStudiedCurriculumTotals } from '../utils/studiedProgress';
+import { AreaItem, ErrorReasonType } from '../types';
 
-export const AnalisesView: React.FC = () => {
+interface AnalisesViewProps {
+  cadernoErros?: unknown;
+  curriculum?: AreaItem[];
+}
+
+export const AnalisesView: React.FC<AnalisesViewProps> = ({ curriculum }) => {
   const [selectedWeeklyHours, setSelectedWeeklyHours] = useState<number>(8);
   const [selectedErrorFilter, setSelectedErrorFilter] = useState<string>('todos');
 
-  const totals = getCurriculumTotals();
+  // Totais por domínio real (coerente com Currículo/Desempenho/Prioridades).
+  const totals = getStudiedCurriculumTotals(curriculum ?? fullCurriculumHierarchy);
 
   // Calculate dynamic 2-year timeline based on weekly hours
   // Total curriculum hours = 780h theory + 350h questions + 180h revisions = ~1310h

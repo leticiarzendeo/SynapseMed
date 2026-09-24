@@ -169,7 +169,7 @@ export class SynapseRelationalDatabase {
 
     this.contents = [
       {
-        id: 'c-icc',
+        id: 'c-insuficiencia-cardiaca',
         moduleId: 'mod-cardio',
         name: 'Insuficiência Cardíaca Congestiva (ICC)',
         description: 'Diagnóstico clínico, ecocardiograma, classificação NYHA/ACC/AHA e terapia quádrupla otimizada.',
@@ -178,7 +178,7 @@ export class SynapseRelationalDatabase {
         isMandatory: true,
       },
       {
-        id: 'c-dpoc',
+        id: 'c-disturbios-obstrutivos',
         moduleId: 'mod-pneumo',
         name: 'Doença Pulmonar Obstrutiva Crônica (DPOC)',
         description: 'Espirometria pós-BD, classificação GOLD ABE, tratamento inalatório e manejo da exacerbação infecciosa.',
@@ -219,7 +219,7 @@ export class SynapseRelationalDatabase {
     this.medwayResources = [
       {
         id: 'med-icc-th',
-        contentId: 'c-icc',
+        contentId: 'c-insuficiencia-cardiaca',
         type: 'THEORY',
         title: 'ICC — Teoria Completa & Fisiopatologia',
         estimatedMinutes: 60,
@@ -230,7 +230,7 @@ export class SynapseRelationalDatabase {
       },
       {
         id: 'med-icc-pre',
-        contentId: 'c-icc',
+        contentId: 'c-insuficiencia-cardiaca',
         type: 'PRE_EXERCISE',
         title: 'ICC — Pré-exercícios diagnósticos',
         estimatedMinutes: 30,
@@ -241,7 +241,7 @@ export class SynapseRelationalDatabase {
       },
       {
         id: 'med-icc-post',
-        contentId: 'c-icc',
+        contentId: 'c-insuficiencia-cardiaca',
         type: 'POST_EXERCISE',
         title: 'ICC — Pós-exercícios de fixação',
         estimatedMinutes: 60,
@@ -252,7 +252,7 @@ export class SynapseRelationalDatabase {
       },
       {
         id: 'med-dpoc-th',
-        contentId: 'c-dpoc',
+        contentId: 'c-disturbios-obstrutivos',
         type: 'THEORY',
         title: 'DPOC — Teoria e Diretriz GOLD',
         estimatedMinutes: 50,
@@ -263,7 +263,7 @@ export class SynapseRelationalDatabase {
       },
       {
         id: 'med-dpoc-pre',
-        contentId: 'c-dpoc',
+        contentId: 'c-disturbios-obstrutivos',
         type: 'PRE_EXERCISE',
         title: 'DPOC — Pré-exercícios diagnósticos',
         estimatedMinutes: 25,
@@ -274,7 +274,7 @@ export class SynapseRelationalDatabase {
       },
       {
         id: 'med-dpoc-post',
-        contentId: 'c-dpoc',
+        contentId: 'c-disturbios-obstrutivos',
         type: 'POST_EXERCISE',
         title: 'DPOC — Pós-exercícios de fixação',
         estimatedMinutes: 55,
@@ -343,10 +343,10 @@ export class SynapseRelationalDatabase {
 
     // Relação muitos-para-muitos (1 conteúdo pode ter vários blocos, e 1 bloco pode cobrir múltiplos conteúdos)
     this.contentOslerMappings = [
-      { id: 'map-1', contentId: 'c-icc', oslerBlockId: 'osler-b1', createdAt: '2026-08-01' },
-      { id: 'map-2', contentId: 'c-icc', oslerBlockId: 'osler-b2', createdAt: '2026-08-01' },
-      { id: 'map-3', contentId: 'c-icc', oslerBlockId: 'osler-b3', createdAt: '2026-08-01' },
-      { id: 'map-4', contentId: 'c-dpoc', oslerBlockId: 'osler-b4', createdAt: '2026-08-01' },
+      { id: 'map-1', contentId: 'c-insuficiencia-cardiaca', oslerBlockId: 'osler-b1', createdAt: '2026-08-01' },
+      { id: 'map-2', contentId: 'c-insuficiencia-cardiaca', oslerBlockId: 'osler-b2', createdAt: '2026-08-01' },
+      { id: 'map-3', contentId: 'c-insuficiencia-cardiaca', oslerBlockId: 'osler-b3', createdAt: '2026-08-01' },
+      { id: 'map-4', contentId: 'c-disturbios-obstrutivos', oslerBlockId: 'osler-b4', createdAt: '2026-08-01' },
       { id: 'map-5', contentId: 'c-asma', oslerBlockId: 'osler-b4', createdAt: '2026-08-01' }, // Bloco b4 cobre tanto DPOC quanto Asma
       { id: 'map-6', contentId: 'c-drc', oslerBlockId: 'osler-b5', createdAt: '2026-08-01' },
     ];
@@ -355,7 +355,7 @@ export class SynapseRelationalDatabase {
       {
         id: 'rev-icc-01',
         userId,
-        contentId: 'c-icc',
+        contentId: 'c-insuficiencia-cardiaca',
         oslerBlockId: 'osler-b1',
         date: '2026-08-25',
         cardsReviewed: 38,
@@ -369,7 +369,7 @@ export class SynapseRelationalDatabase {
       {
         id: 'rev-dpoc-01',
         userId,
-        contentId: 'c-dpoc',
+        contentId: 'c-disturbios-obstrutivos',
         oslerBlockId: 'osler-b4',
         date: '2026-09-01',
         cardsReviewed: 32,
@@ -387,7 +387,7 @@ export class SynapseRelationalDatabase {
       {
         id: 'fsrs-icc-01',
         userId,
-        contentId: 'c-icc',
+        contentId: 'c-insuficiencia-cardiaca',
         stability: 14.2, // Estabilidade de ~14 dias
         difficulty: 4.8,
         retrievability: 0.84, // 84% de retenção estimada hoje
@@ -400,7 +400,7 @@ export class SynapseRelationalDatabase {
       {
         id: 'fsrs-dpoc-01',
         userId,
-        contentId: 'c-dpoc',
+        contentId: 'c-disturbios-obstrutivos',
         stability: 8.5,
         difficulty: 5.6,
         retrievability: 0.79, // Retenção em declínio
@@ -465,8 +465,8 @@ export class SynapseRelationalDatabase {
         examId: 'exam-usp-2025',
         questionNumber: 37,
         statement: 'Paciente de 64 anos, hipertenso, procura PS com dispneia paroxística noturna e estertores bibasais. Qual a conduta?',
-        aiContentId: 'c-icc',
-        finalContentId: 'c-icc',
+        aiContentId: 'c-insuficiencia-cardiaca',
+        finalContentId: 'c-insuficiencia-cardiaca',
         aiConfidence: 0.96,
         classificationStatus: 'user_confirmed',
       },
@@ -475,8 +475,8 @@ export class SynapseRelationalDatabase {
         examId: 'exam-unifesp-2025',
         questionNumber: 22,
         statement: 'Homem de 68 anos, tabagista 50 anos-maço, espirometria VEF1/CVF 0.58 com exacerbação infecciosa recente. Qual esquema?',
-        aiContentId: 'c-dpoc',
-        finalContentId: 'c-dpoc',
+        aiContentId: 'c-disturbios-obstrutivos',
+        finalContentId: 'c-disturbios-obstrutivos',
         aiConfidence: 0.94,
         classificationStatus: 'user_confirmed',
       },
@@ -485,8 +485,8 @@ export class SynapseRelationalDatabase {
         examId: 'exam-usp-2025',
         questionNumber: 42,
         statement: 'Paciente com DPOC avançado e hipoxemia crônica. Critérios para O2 domiciliar.',
-        aiContentId: 'c-dpoc',
-        finalContentId: 'c-dpoc',
+        aiContentId: 'c-disturbios-obstrutivos',
+        finalContentId: 'c-disturbios-obstrutivos',
         aiConfidence: 0.91,
         classificationStatus: 'user_confirmed',
       },
@@ -496,7 +496,7 @@ export class SynapseRelationalDatabase {
       {
         id: 'cl-hist-1',
         questionId: 'q-usp-37',
-        contentId: 'c-icc',
+        contentId: 'c-insuficiencia-cardiaca',
         source: 'AI',
         date: '2026-08-05T12:05:00Z',
         confidence: 0.96,
@@ -540,7 +540,7 @@ export class SynapseRelationalDatabase {
       {
         id: 'act-dpoc-questoes',
         userId,
-        contentId: 'c-dpoc',
+        contentId: 'c-disturbios-obstrutivos',
         type: 'EXAM_QUESTIONS',
         sourceReference: 'Questões USP & UNIFESP',
         estimatedMinutes: 60,
@@ -552,7 +552,7 @@ export class SynapseRelationalDatabase {
       {
         id: 'act-icc-revisao',
         userId,
-        contentId: 'c-icc',
+        contentId: 'c-insuficiencia-cardiaca',
         type: 'REVIEW',
         sourceReference: 'Revisão FSRS 14 dias',
         estimatedMinutes: 30,
@@ -564,7 +564,7 @@ export class SynapseRelationalDatabase {
       {
         id: 'act-osler-icc',
         userId,
-        contentId: 'c-icc',
+        contentId: 'c-insuficiencia-cardiaca',
         type: 'OSLER',
         sourceReference: 'Osler Flashcards ICC',
         estimatedMinutes: 10,
@@ -581,7 +581,7 @@ export class SynapseRelationalDatabase {
         id: 'ses-1',
         userId,
         activityId: 'act-hist-01',
-        contentId: 'c-icc',
+        contentId: 'c-insuficiencia-cardiaca',
         startedAt: '2026-09-07T14:00:00Z',
         endedAt: '2026-09-07T14:57:00Z',
         activeDurationMinutes: 57,
@@ -594,7 +594,7 @@ export class SynapseRelationalDatabase {
     this.contentAssessments = [
       {
         userId,
-        contentId: 'c-icc',
+        contentId: 'c-insuficiencia-cardiaca',
         domainScore: 78,
         knowledgeScore: 86,
         applicationScore: 72,
@@ -605,7 +605,7 @@ export class SynapseRelationalDatabase {
       },
       {
         userId,
-        contentId: 'c-dpoc',
+        contentId: 'c-disturbios-obstrutivos',
         domainScore: 71,
         knowledgeScore: 78,
         applicationScore: 65,
@@ -631,7 +631,7 @@ export class SynapseRelationalDatabase {
       {
         id: 'cah-icc-1',
         userId,
-        contentId: 'c-icc',
+        contentId: 'c-insuficiencia-cardiaca',
         domainScore: 64,
         knowledgeScore: 70,
         applicationScore: 60,
@@ -642,7 +642,7 @@ export class SynapseRelationalDatabase {
       {
         id: 'cah-icc-2',
         userId,
-        contentId: 'c-icc',
+        contentId: 'c-insuficiencia-cardiaca',
         domainScore: 72,
         knowledgeScore: 80,
         applicationScore: 66,
@@ -653,7 +653,7 @@ export class SynapseRelationalDatabase {
       {
         id: 'cah-icc-3',
         userId,
-        contentId: 'c-icc',
+        contentId: 'c-insuficiencia-cardiaca',
         domainScore: 81,
         knowledgeScore: 88,
         applicationScore: 75,
@@ -664,7 +664,7 @@ export class SynapseRelationalDatabase {
       {
         id: 'cah-icc-4',
         userId,
-        contentId: 'c-icc',
+        contentId: 'c-insuficiencia-cardiaca',
         domainScore: 78,
         knowledgeScore: 86,
         applicationScore: 72,
@@ -678,7 +678,7 @@ export class SynapseRelationalDatabase {
     this.contentPriorities = [
       {
         userId,
-        contentId: 'c-dpoc',
+        contentId: 'c-disturbios-obstrutivos',
         score: 94,
         urgency: 'ALTA',
         priorityLevel: 1,
@@ -690,7 +690,7 @@ export class SynapseRelationalDatabase {
       },
       {
         userId,
-        contentId: 'c-icc',
+        contentId: 'c-insuficiencia-cardiaca',
         score: 89,
         urgency: 'ALTA',
         priorityLevel: 2,

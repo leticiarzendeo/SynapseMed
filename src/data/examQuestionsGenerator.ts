@@ -21,16 +21,16 @@ export const generate100QuestionsExam = (
         {
           moduloName: 'Pneumologia',
           subareas: [
-            { contentId: 'c-dpoc', contentName: 'DPOC (Doença Pulmonar Obstrutiva Crônica)', snippet: 'Homem de 66 anos, tabagista 50 anos-maço, dispneia progressiva MRC 3 e tosse crônica matinal. Espirometria VEF1/CVF 0,58 pós-broncodilatador.', answer: 'C' },
+            { contentId: 'c-disturbios-obstrutivos', contentName: 'DPOC (Doença Pulmonar Obstrutiva Crônica)', snippet: 'Homem de 66 anos, tabagista 50 anos-maço, dispneia progressiva MRC 3 e tosse crônica matinal. Espirometria VEF1/CVF 0,58 pós-broncodilatador.', answer: 'C' },
             { contentId: 'c-asma', contentName: 'Asma Brônquica e Manejo de Crise Aguda', snippet: 'Mulher de 28 anos, episódios noturnos de sibilância e opressão torácica. Pico de fluxo expiratório com variação circadiana > 20%.', answer: 'B' },
             { contentId: 'c-derrame-pleural', contentName: 'Derrame Pleural & Critérios de Light', snippet: 'Paciente com dispneia e macicez em base direita. Toracocentese revela relação proteína pleural/sérica de 0,7 e DHL pleural/sérico de 0,85.', answer: 'A' },
-            { contentId: 'c-dpoc', contentName: 'DPOC - Manejo de Exacerbação Aguda', snippet: 'Paciente com DPOC conhecido apresenta piora do escarro (volume e purulência) e dispneia (Critérios de Anthonisen I).', answer: 'D' }
+            { contentId: 'c-disturbios-obstrutivos', contentName: 'DPOC - Manejo de Exacerbação Aguda', snippet: 'Paciente com DPOC conhecido apresenta piora do escarro (volume e purulência) e dispneia (Critérios de Anthonisen I).', answer: 'D' }
           ]
         },
         {
           moduloName: 'Cardiologia',
           subareas: [
-            { contentId: 'c-icc', contentName: 'Insuficiência Cardíaca Congestiva (ICC)', snippet: 'Homem de 62 anos com ICFER (FEVE 32%), classe funcional NYHA III, em uso de Enalapril e Carvedilol em doses máximas toleradas.', answer: 'B' },
+            { contentId: 'c-insuficiencia-cardiaca', contentName: 'Insuficiência Cardíaca Congestiva (ICC)', snippet: 'Homem de 62 anos com ICFER (FEVE 32%), classe funcional NYHA III, em uso de Enalapril e Carvedilol em doses máximas toleradas.', answer: 'B' },
             { contentId: 'c-has', contentName: 'Hipertensão Arterial Sistêmica & Refratariedade', snippet: 'Mulher de 55 anos em uso de 3 anti-hipertensivos em doses plenas (incluindo tiazídico) mantendo PA 155x95 mmHg.', answer: 'C' },
             { contentId: 'c-sca', contentName: 'Síndrome Coronariana Aguda sem Supra de ST', snippet: 'Dor retroesternal opressiva há 2 horas com troponina ultrassensível elevada e inversão simétrica de onda T em V1-V4.', answer: 'A' },
             { contentId: 'c-fa', contentName: 'Fibrilação Atrial & Anticoagulação (CHA2DS2-VASc)', snippet: 'Paciente de 71 anos, hipertensa e diabética, com FA paroxística recém-diagnosticada. Escore CHA2DS2-VASc = 4.', answer: 'D' }
@@ -172,7 +172,7 @@ export const generate100QuestionsExam = (
         {
           moduloName: 'Obstetrícia Geral & Alto Risco',
           subareas: [
-            { contentId: 'c-dheg', contentName: 'Síndromes Hipertensivas na Gestação & Pré-Eclâmpsia', snippet: 'Gestante de 34 semanas com PA 160x110 mmHg, proteinúria de fita 3+ e plaquetopenia. Indicação de Sulfato de Magnésio (Pritchard).', answer: 'D' },
+            { contentId: 'c-sindromes-hipertensivas-da-gestacao', contentName: 'Síndromes Hipertensivas na Gestação & Pré-Eclâmpsia', snippet: 'Gestante de 34 semanas com PA 160x110 mmHg, proteinúria de fita 3+ e plaquetopenia. Indicação de Sulfato de Magnésio (Pritchard).', answer: 'D' },
             { contentId: 'c-prenatal', contentName: 'Assistência Pré-Natal de Baixo Risco & Rastreamento', snippet: 'Exames obrigatórios do primeiro trimestre: tipagem sanguínea, VDRL, HIV, HBsAg, toxoplasmose e urocultura.', answer: 'A' },
             { contentId: 'c-diabetes-gestacional', contentName: 'Diabetes Mellitus Gestacional (DMG) & TOTG 75g', snippet: 'Glicemia de jejum de 96 mg/dL na 12ª semana confirmando diagnóstico de diabetes gestacional.', answer: 'B' }
           ]

@@ -4614,7 +4614,7 @@ export const defaultSourceMappings: SourceMapping[] = [
   },
   {
     "id": "map-c-dpoc-0",
-    "contentId": "c-dpoc",
+    "contentId": "c-disturbios-obstrutivos",
     "source": "osler",
     "oslerBlockId": "osler-dermatoses-infecciosas-bacterianas-fungicas-p",
     "oslerBlockTitle": "Dermatoses Infecciosas (Bacterianas, Fúngicas, Parasitárias, Virais) / Hanseníase",
@@ -4794,7 +4794,7 @@ export const defaultSourceMappings: SourceMapping[] = [
   },
   {
     "id": "map-c-icc-0",
-    "contentId": "c-icc",
+    "contentId": "c-insuficiencia-cardiaca",
     "source": "osler",
     "oslerBlockId": "osler-insuficiencia-renal-dialise-doenca-renal-cron",
     "oslerBlockTitle": "Insuficiência Renal (Diálise, Doença Renal Crônica, Injúria Renal Aguda)",

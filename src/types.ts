@@ -44,7 +44,7 @@ export interface OslerBlock {
 
 export interface SourceMapping {
   id: string;
-  contentId: string; // Conteúdo do currículo Medway (ex: 'c-icc')
+  contentId: string; // Conteúdo do currículo Medway (ex: 'c-insuficiencia-cardiaca')
   source: 'osler';
   oslerBlockId: string;
   oslerBlockTitle: string;
