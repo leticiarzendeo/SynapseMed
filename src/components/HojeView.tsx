@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserPreferences, ErrorReasonType, ContentItem, AreaItem } from '../types';
 import { getContentState } from '../utils/contentState';
+import { buildTodayPlan, rankContentsByPriority, ContentPriority, ActivityKind } from '../utils/priorityEngine';
 import { getAllCurriculumContents } from '../data/mockData';
 import { DominioDossieModal } from './DominioDossieModal';
 
@@ -59,103 +60,62 @@ export const HojeView: React.FC<HojeViewProps> = ({
   onContentStudied,
   curriculum,
 }) => {
-  // Cota de disponibilidade diária (Padrão 100 min / 1h40 conforme especificação)
+  // Cota de disponibilidade diária (padrão 100 min / 1h40)
   const [availableTodayMin, setAvailableTodayMin] = useState<number>(100);
 
-  // Lista padrão recomendada pelo algoritmo Cérebro 2 para 100 min (1h40)
-  const canonicalRecommendedActivities: ActivityItem[] = [
-    {
-      id: 'act-dpoc-teoria',
-      contentId: 'c-disturbios-obstrutivos',
-      name: 'DPOC',
-      subType: 'Teoria Medway',
-      durationMin: 50,
-      specialty: 'Clínica Médica',
-      modulo: 'Pneumologia',
-      priority: 'alta',
-      priorityScore: 98,
-      whyNow: 'Base teórica para resolução de questões de alta incidência nas bancas selecionadas.',
-      whyDetails: {
-        incidence: 'Incidência de 94/100 (USP: 10q, UNIFESP: 8q, ENARE: 9q)',
-        examScore: 'Teoria Medway: Videoaula (45min) + Apostila GOLD',
-        domainScore: 'Domínio teórico estimado C1: 72%',
-        targetScore: 'Meta de consolidação: ≥ 85%',
-        fsrsStatus: 'Iniciação de ciclo teórico',
-        postExercisesCompleted: 'Pré-requisito para pós-exercícios',
-      },
-      recommendedDay: 'segunda',
-      currentDay: 'segunda',
-    },
-    {
-      id: 'act-dpoc',
-      contentId: 'c-disturbios-obstrutivos',
-      name: 'DPOC',
-      subType: 'questões de provas',
-      durationMin: 40,
-      specialty: 'Clínica Médica',
-      modulo: 'Pneumologia',
-      priority: 'alta',
-      priorityScore: 96,
-      whyNow: 'Incidência elevada nas instituições selecionadas + desempenho de aplicação abaixo da meta.',
-      whyDetails: {
-        incidence: 'Incidência elevada nas bancas selecionadas (USP: 10q, UNIFESP: 8q, ENARE: 9q)',
-        examScore: 'Aplicação: 71% (Abaixo da meta de 85%)',
-        domainScore: 'Domínio estimado Cérebro 1: 78%',
-        targetScore: 'Meta de consolidação: ≥ 85%',
-        fsrsStatus: 'Retenção FSRS: 84% (em consolidação ativa)',
-        postExercisesCompleted: 'Exercícios pós-vídeo: 100% concluídos',
-      },
-      recommendedDay: 'terca',
-      currentDay: 'terca',
-    },
-    {
-      id: 'act-icc',
-      contentId: 'c-insuficiencia-cardiaca',
-      name: 'ICC',
-      subType: 'revisão',
-      durationMin: 30,
-      specialty: 'Clínica Médica',
-      modulo: 'Cardiologia',
-      priority: 'alta',
-      priorityScore: 90,
-      whyNow: 'Revisão FSRS programada para hoje + consolidação prática em perfis Stevenson.',
-      whyDetails: {
-        incidence: 'Incidência de 92/100 (USP: 11q, UNIFESP: 8q, ENARE: 9q)',
-        examScore: 'Desempenho em provas reais: 74%',
-        domainScore: 'Domínio estimado Cérebro 1: 83%',
-        targetScore: 'Meta de consolidação: ≥ 85%',
-        fsrsStatus: 'Revisão FSRS agendada para hoje (estabilidade 21 dias)',
-        postExercisesCompleted: 'Exercícios pós-vídeo: 100% concluídos',
-      },
-      recommendedDay: 'terca',
-      currentDay: 'terca',
-    },
-    {
-      id: 'act-osler-icc',
-      contentId: 'c-osler-icc',
-      name: 'Osler — ICC',
-      subType: '10min restantes',
-      durationMin: 10,
-      specialty: 'Clínica Médica',
-      modulo: 'Cardiologia',
-      priority: 'alta',
-      priorityScore: 84,
-      whyNow: 'Lote rápido de cartões FSRS de altíssimo impacto por minuto para fechar os 10min finais da cota de 1h40.',
-      whyDetails: {
-        incidence: 'Incidência alta nas bancas selecionadas (92/100)',
-        examScore: 'Desempenho em provas: 74%',
-        domainScore: 'Domínio estimado: 83%',
-        targetScore: 'Meta: ≥ 85%',
-        fsrsStatus: 'Retrievability em 82% — intervalo ideal para retenção rápida de 10 min',
-        postExercisesCompleted: 'Exercícios pós-vídeo: 100% concluídos',
-      },
-      recommendedDay: 'terca',
-      currentDay: 'terca',
-    },
-  ];
+  // Converte a recomendação do motor de prioridade (ContentPriority) para o
+  // formato de card usado pela tela (ActivityItem).
+  const ACTIVITY_LABEL: Record<ActivityKind, string> = {
+    avanco: 'Teoria Medway',
+    exercicios: 'Exercícios Medway',
+    questoes: 'Questões de provas reais',
+    revisao: 'Revisão / Osler',
+  };
 
-  // Activities for Today
-  const [activities, setActivities] = useState<ActivityItem[]>(canonicalRecommendedActivities);
+  const planToActivities = (plan: ContentPriority[]): ActivityItem[] =>
+    plan.map((p) => ({
+      id: `act-${p.contentId}-${p.recommendedActivity}`,
+      contentId: p.contentId,
+      name: p.contentName,
+      subType: ACTIVITY_LABEL[p.recommendedActivity],
+      durationMin: p.estimatedMinutes,
+      specialty: p.moduleName,
+      modulo: p.moduleName,
+      priority: p.priorityScore >= 50 ? 'alta' : p.priorityScore >= 25 ? 'media' : 'baixa',
+      priorityScore: p.priorityScore,
+      whyNow: p.reason,
+      whyDetails: {
+        incidence:
+          p.incidence >= 1
+            ? 'Alta incidência nas instituições-alvo'
+            : 'Incidência de base (não prioritário Medway)',
+        examScore: `Aplicação estimada: ${p.application}%`,
+        domainScore: `Domínio estimado: ${p.domain}% (conhecimento ${p.knowledge}%, retenção ${p.retention}%)`,
+        targetScore: 'Meta de consolidação: ≥ 85%',
+        fsrsStatus:
+          p.state === 'dominado'
+            ? 'Conteúdo consolidado — manutenção'
+            : p.state === 'em_andamento'
+            ? 'Em consolidação'
+            : 'Não iniciado',
+        postExercisesCompleted: `Confiança da estimativa: ${p.confidence}%`,
+      },
+      recommendedDay: 'hoje',
+      currentDay: 'hoje',
+    }));
+
+  // Plano de hoje gerado pelo motor real, a partir do currículo + tempo.
+  const recommendedPlan = React.useMemo(
+    () => planToActivities(buildTodayPlan(curriculum ?? [], availableTodayMin)),
+    [curriculum, availableTodayMin]
+  );
+
+  // Activities for Today (derivadas do plano real; recomputam se o tempo muda).
+  const [activities, setActivities] = useState<ActivityItem[]>(recommendedPlan);
+  useEffect(() => {
+    setActivities(recommendedPlan);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recommendedPlan]);
 
   // Registro de Autonomia: histórico de alterações manuais da recomendação
   const [userOverrides, setUserOverrides] = useState<UserOverrideRecord[]>([]);
@@ -163,119 +123,15 @@ export const HojeView: React.FC<HojeViewProps> = ({
   // Modal de Dossiê Completo do Domínio (Cérebro 1 & Cérebro 2)
   const [selectedContentForDossier, setSelectedContentForDossier] = useState<ContentItem | null>(null);
 
-  // Alternatives pool for "Trocar atividade"
-  const alternativeActivities: ActivityItem[] = [
-    {
-      id: 'act-doenca-x',
-      contentId: 'c-doenca-x',
-      name: 'Doença X (Conteúdo Raro)',
-      subType: 'Revisão teórica + questões',
-      durationMin: 30,
-      specialty: 'Clínica Médica',
-      modulo: 'Nefrologia',
-      priority: 'media',
-      priorityScore: 50,
-      whyNow: 'Domínio baixo (65%), mas incidência rara nas bancas-alvo (20/100). Prioridade secundária no Cérebro 2.',
-      whyDetails: {
-        incidence: 'Incidência muito baixa (20/100 — média de 0 a 1q por ano)',
-        examScore: 'Desempenho em provas: 60%',
-        domainScore: 'Domínio estimado: 65% (menor nota isolada)',
-        targetScore: 'Meta: 85%',
-        fsrsStatus: 'FSRS em dia (próxima revisão em 15 dias)',
-        postExercisesCompleted: '100% concluído',
-      },
-      recommendedDay: 'sexta',
-      currentDay: 'segunda',
-    },
-    {
-      id: 'act-iam',
-      contentId: 'c-iam',
-      name: 'IAM (Infarto Agudo do Miocárdio)',
-      subType: 'Manutenção periódica de prova',
-      durationMin: 30,
-      specialty: 'Clínica Médica',
-      modulo: 'Cardiologia',
-      priority: 'baixa',
-      priorityScore: 30,
-      whyNow: 'Domínio 89% já consolidado (≥ 85%) com retenção estável no FSRS (91%). Prioridade de manutenção.',
-      whyDetails: {
-        incidence: 'Incidência muito alta (90/100)',
-        examScore: 'Desempenho em bancas: 89%',
-        domainScore: 'Domínio estimado: 89% (🟢 Consolidado)',
-        targetScore: 'Meta: 85% (Atingida)',
-        fsrsStatus: 'Estabilidade S: 32 dias (revisão apenas no próximo mês)',
-        postExercisesCompleted: '100% concluído',
-      },
-      recommendedDay: 'sábado',
-      currentDay: 'segunda',
-    },
-    {
-      id: 'act-drc',
-      contentId: 'c-drc',
-      name: 'DRC (Doença Renal Crônica)',
-      subType: 'Exercícios comentados',
-      durationMin: 35,
-      specialty: 'Clínica Médica',
-      modulo: 'Nefrologia',
-      priority: 'alta',
-      priorityScore: 84,
-      whyNow: 'Saldo de 15 exercícios pendentes pós-aula + urgência dialítica.',
-      whyDetails: {
-        incidence: 'Alta incidência em nefrologia (84/100)',
-        examScore: 'Desempenho em questões: 65%',
-        domainScore: 'Domínio estimado: 68%',
-        targetScore: 'Meta: 85%',
-        fsrsStatus: 'Estabilidade S: 8 dias',
-        postExercisesCompleted: '80% concluído',
-      },
-      recommendedDay: 'quarta',
-      currentDay: 'segunda',
-    },
-    {
-      id: 'act-sca',
-      contentId: 'c-sca',
-      name: 'SCA (Síndrome Coronariana Aguda)',
-      subType: 'Exercícios de fixação',
-      durationMin: 25,
-      specialty: 'Clínica Médica',
-      modulo: 'Cardiologia',
-      priority: 'alta',
-      priorityScore: 80,
-      whyNow: 'Fixação de conduta e delta T em supra de ST.',
-      whyDetails: {
-        incidence: 'Muito alta (USP, UNICAMP, ENARE)',
-        examScore: 'Desempenho: 68%',
-        domainScore: 'Domínio: 70%',
-        targetScore: 'Meta: 85%',
-        fsrsStatus: 'Em consolidação inicial',
-        postExercisesCompleted: '100% concluído',
-      },
-      recommendedDay: 'quinta',
-      currentDay: 'segunda',
-    },
-    {
-      id: 'act-pneumonia',
-      contentId: 'c-pneumonia',
-      name: 'Pneumonia Adquirida na Comunidade',
-      subType: 'Teoria + diagnóstico',
-      durationMin: 35,
-      specialty: 'Clínica Médica',
-      modulo: 'Pneumologia',
-      priority: 'alta',
-      priorityScore: 82,
-      whyNow: 'Critérios CURB-65 e antimicrobianos empíricos.',
-      whyDetails: {
-        incidence: 'Muito alta em todas as bancas de SP e ENARE',
-        examScore: 'Sem dados prévios',
-        domainScore: 'Domínio inicial: 0%',
-        targetScore: 'Meta: 85%',
-        fsrsStatus: 'Conteúdo inédito',
-        postExercisesCompleted: '0% concluído',
-      },
-      recommendedDay: 'quarta',
-      currentDay: 'segunda',
-    },
-  ];
+  // Alternativas para "Trocar atividade": próximas prioridades do motor que
+  // NÃO entraram no plano de hoje (dados reais, não lista fixa).
+  const alternativeActivities: ActivityItem[] = React.useMemo(() => {
+    const planIds = new Set(recommendedPlan.map((a) => a.contentId));
+    const rest = rankContentsByPriority(curriculum ?? [])
+      .filter((c) => c.priorityScore > 0 && !planIds.has(c.contentId))
+      .slice(0, 6);
+    return planToActivities(rest);
+  }, [curriculum, recommendedPlan]);
 
   // Active state modals
   const [selectedWhyActivity, setSelectedWhyActivity] = useState<ActivityItem | null>(null);
@@ -286,7 +142,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Timer simulation for active study session
-  const [sessionTimerSeconds, setSessionTimerSeconds] = useState(47 * 60); // 47 min pre-simulated
+  const [sessionTimerSeconds, setSessionTimerSeconds] = useState(0); // cronômetro começa zerado
   const [isTimerRunning, setIsTimerRunning] = useState(true);
 
   // Finish session form state
@@ -364,7 +220,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
     setActivities((prev) => prev.filter((a) => a.id !== activity.id));
     onContentStudied?.(activity.contentId);
     showToast(
-      `✓ Atividade "${activity.name}" concluída! Domínio recalculado para 78% e FSRS reagendado.`
+      `✓ Atividade "${activity.name}" concluída! Progresso registrado.`
     );
   };
 
@@ -386,7 +242,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
     setShowFinishModal(false);
     setActiveStudySession(null);
     showToast(
-      `Sessão de ${activeStudySession.name} concluída! Domínio recalculado para 78% e FSRS reagendado para daqui a 14 dias.`
+      `Sessão de ${activeStudySession.name} concluída! Progresso registrado.`
     );
   };
 
@@ -427,9 +283,9 @@ export const HojeView: React.FC<HojeViewProps> = ({
   };
 
   const handleRestoreRecommendation = () => {
-    setActivities(canonicalRecommendedActivities);
+    setActivities(recommendedPlan);
     setUserOverrides([]);
-    showToast('Recomendação do algoritmo Cérebro 2 restaurada com sucesso!');
+    showToast('Recomendação do algoritmo restaurada com sucesso!');
   };
 
   const handleOpenDossier = (contentId?: string, fallbackName?: string) => {
@@ -451,55 +307,8 @@ export const HojeView: React.FC<HojeViewProps> = ({
 
   const handleSelectAvailableTime = (min: number) => {
     setAvailableTodayMin(min);
-    if (min === 100) {
-      setActivities(canonicalRecommendedActivities);
-    } else if (min === 80) {
-      setActivities([
-        { ...canonicalRecommendedActivities[0], durationMin: 40 },
-        canonicalRecommendedActivities[1],
-        canonicalRecommendedActivities[2],
-      ]);
-    } else if (min === 60) {
-      setActivities([
-        canonicalRecommendedActivities[0], // DPOC 60 min
-      ]);
-    } else if (min === 45) {
-      setActivities([{ ...canonicalRecommendedActivities[0], durationMin: 45 }]);
-    } else if (min === 90) {
-      setActivities([
-        canonicalRecommendedActivities[0],
-        canonicalRecommendedActivities[1],
-        { ...canonicalRecommendedActivities[2], durationMin: 20 },
-      ]);
-    } else if (min === 120) {
-      setActivities([
-        canonicalRecommendedActivities[0],
-        { ...canonicalRecommendedActivities[1], durationMin: 40 },
-        { ...canonicalRecommendedActivities[2], durationMin: 20 },
-        {
-          id: 'act-drc-120min',
-          contentId: 'c-drc',
-          name: 'DRC',
-          subType: 'Exercícios comentados',
-          durationMin: 20,
-          specialty: 'Clínica Médica',
-          modulo: 'Nefrologia',
-          priority: 'alta',
-          priorityScore: 84,
-          whyNow: 'Alta incidência em nefrologia (84/100) + exercícios pós-aula pendentes.',
-          whyDetails: {
-            incidence: 'Alta incidência (84/100)',
-            examScore: '65%',
-            domainScore: 'Domínio 68%',
-            targetScore: '85%',
-            fsrsStatus: 'Estabilidade S: 8 dias',
-            postExercisesCompleted: '80% concluído',
-          },
-          recommendedDay: 'segunda',
-          currentDay: 'segunda',
-        },
-      ]);
-    }
+    // O plano recomputa automaticamente (useMemo/useEffect) a partir do novo
+    // tempo disponível e do currículo real — sem listas fixas.
     showToast(
       `Disponibilidade ajustada para ${
         min >= 60 ? `${Math.floor(min / 60)}h${min % 60 ? `${min % 60}min` : ''}` : `${min} min`
@@ -876,272 +685,8 @@ export const HojeView: React.FC<HojeViewProps> = ({
         </div>
       </section>
 
-      {/* 3.1 DIAGNÓSTICO COMPARATIVO DE PRIORIZAÇÃO (CÉREBRO 2) */}
-      <section className="bg-surface-container-lowest rounded-2xl p-6 border border-surface-container shadow-xs space-y-5">
-        <div className="flex items-center justify-between border-b border-surface-container pb-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🧠</span>
-            <h3 className="text-base font-extrabold text-on-surface">
-              Diagnóstico Comparativo de Priorização (Cérebro 2)
-            </h3>
-          </div>
-        </div>
+      {/* Diagnóstico comparativo (Cérebro 2) removido: será reconstruído com dados reais do motor de prioridade. */}
 
-        {/* Matriz Comparativa de Casos */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-          {/* Caso 1: DPOC */}
-          <div className="p-4 rounded-xl bg-surface-container-low/50 border-2 border-rose-200/80 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-on-surface">1️⃣ DPOC</span>
-                <span className="px-2 py-0.5 rounded text-[0.625rem] font-bold bg-surface-container text-secondary">
-                  Pneumologia
-                </span>
-              </div>
-              <span className="px-2.5 py-0.5 rounded-full text-[0.6875rem] font-extrabold bg-rose-100 text-rose-800 border border-rose-200">
-                Score: 96 • Urgente 🔴
-              </span>
-            </div>
-
-            <div className="grid grid-cols-4 gap-1.5 text-center text-[0.6875rem]">
-              <div className="bg-white/70 p-1.5 rounded-lg border border-surface-container">
-                <span className="text-secondary block text-[0.5625rem]">Domínio C1</span>
-                <span className="font-bold text-on-surface">72%</span>
-              </div>
-              <div className="bg-white/70 p-1.5 rounded-lg border border-rose-100">
-                <span className="text-rose-700 font-bold block text-[0.5625rem]">Aplicação</span>
-                <span className="font-bold text-rose-700">65% ⚠️</span>
-              </div>
-              <div className="bg-white/70 p-1.5 rounded-lg border border-surface-container">
-                <span className="text-secondary block text-[0.5625rem]">Incidência</span>
-                <span className="font-bold text-primary">94/100</span>
-              </div>
-              <div className="bg-white/70 p-1.5 rounded-lg border border-surface-container">
-                <span className="text-secondary block text-[0.5625rem]">FSRS</span>
-                <span className="font-bold text-amber-700">-2 dias</span>
-              </div>
-            </div>
-
-            {/* Decisão do Cérebro 2 com ferramenta de setinha */}
-            <div className="pt-1">
-              <button
-                type="button"
-                onClick={() => toggleDecision('dpoc')}
-                className="inline-flex items-center gap-1 text-xs text-secondary hover:text-on-surface font-semibold transition-colors"
-              >
-                <span className="material-symbols-outlined text-sm">
-                  {expandedDecisions['dpoc'] ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
-                </span>
-                <span>Decisão do Cérebro 2</span>
-              </button>
-              {expandedDecisions['dpoc'] && (
-                <p className="text-[0.75rem] text-secondary leading-relaxed pl-3.5 border-l-2 border-primary/30 mt-1 animate-in fade-in">
-                  1º da fila hoje (40 min). Gargalo crítico em questões de prova das bancas-alvo somado a revisão atrasada gera risco iminente de perda de pontos.
-                </p>
-              )}
-            </div>
-
-            <div className="pt-1">
-              <button
-                onClick={() => handleOpenDossier('c-disturbios-obstrutivos', 'DPOC')}
-                className="px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold flex items-center gap-1.5 transition-all border border-surface-container"
-              >
-                <span className="material-symbols-outlined text-sm text-primary">description</span>
-                <span>Ver dossiê: DPOC</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Caso 2: ICC */}
-          <div className="p-4 rounded-xl bg-surface-container-low/50 border-2 border-amber-200/80 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-on-surface">2️⃣ ICC</span>
-                <span className="px-2 py-0.5 rounded text-[0.625rem] font-bold bg-surface-container text-secondary">
-                  Cardiologia
-                </span>
-              </div>
-              <span className="px-2.5 py-0.5 rounded-full text-[0.6875rem] font-extrabold bg-amber-100 text-amber-900 border border-amber-200">
-                Score: 86 • Alta 🟠
-              </span>
-            </div>
-
-            <div className="grid grid-cols-4 gap-1.5 text-center text-[0.6875rem]">
-              <div className="bg-white/70 p-1.5 rounded-lg border border-surface-container">
-                <span className="text-secondary block text-[0.5625rem]">Domínio C1</span>
-                <span className="font-bold text-on-surface">83%</span>
-              </div>
-              <div className="bg-white/70 p-1.5 rounded-lg border border-surface-container">
-                <span className="text-secondary block text-[0.5625rem]">Aplicação</span>
-                <span className="font-bold text-on-surface">74%</span>
-              </div>
-              <div className="bg-white/70 p-1.5 rounded-lg border border-surface-container">
-                <span className="text-secondary block text-[0.5625rem]">Incidência</span>
-                <span className="font-bold text-primary">92/100</span>
-              </div>
-              <div className="bg-white/70 p-1.5 rounded-lg border border-surface-container">
-                <span className="text-secondary block text-[0.5625rem]">FSRS</span>
-                <span className="font-bold text-emerald-700">Hoje</span>
-              </div>
-            </div>
-
-            {/* Decisão do Cérebro 2 com ferramenta de setinha */}
-            <div className="pt-1">
-              <button
-                type="button"
-                onClick={() => toggleDecision('icc')}
-                className="inline-flex items-center gap-1 text-xs text-secondary hover:text-on-surface font-semibold transition-colors"
-              >
-                <span className="material-symbols-outlined text-sm">
-                  {expandedDecisions['icc'] ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
-                </span>
-                <span>Decisão do Cérebro 2</span>
-              </button>
-              {expandedDecisions['icc'] && (
-                <p className="text-[0.75rem] text-secondary leading-relaxed pl-3.5 border-l-2 border-primary/30 mt-1 animate-in fade-in">
-                  2º da fila hoje (30 min). Conteúdo de incidência massiva em São Paulo. Foco em consolidar Stevenson B vs C e fechar os 85%.
-                </p>
-              )}
-            </div>
-
-            <div className="pt-1">
-              <button
-                onClick={() => handleOpenDossier('c-insuficiencia-cardiaca', 'ICC')}
-                className="px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold flex items-center gap-1.5 transition-all border border-surface-container"
-              >
-                <span className="material-symbols-outlined text-sm text-primary">description</span>
-                <span>Ver dossiê: ICC</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Caso 3: Doença X (Conteúdo Raro) */}
-          <div className="p-4 rounded-xl bg-surface-container-low/50 border border-surface-container space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-on-surface">3️⃣ Doença X</span>
-                <span className="px-2 py-0.5 rounded text-[0.625rem] font-bold bg-surface-container text-secondary">
-                  Conteúdo Raro
-                </span>
-              </div>
-              <span className="px-2.5 py-0.5 rounded-full text-[0.6875rem] font-extrabold bg-surface-container text-on-surface border border-surface-container-high">
-                Score: 50 • Média 🟡
-              </span>
-            </div>
-
-            <div className="grid grid-cols-4 gap-1.5 text-center text-[0.6875rem]">
-              <div className="bg-white/70 p-1.5 rounded-lg border border-amber-200">
-                <span className="text-amber-800 font-bold block text-[0.5625rem]">Domínio C1</span>
-                <span className="font-bold text-amber-800">65% (Menor)</span>
-              </div>
-              <div className="bg-white/70 p-1.5 rounded-lg border border-surface-container">
-                <span className="text-secondary block text-[0.5625rem]">Aplicação</span>
-                <span className="font-bold text-on-surface">60%</span>
-              </div>
-              <div className="bg-white/70 p-1.5 rounded-lg border border-surface-container">
-                <span className="text-secondary block text-[0.5625rem]">Incidência</span>
-                <span className="font-bold text-secondary">20/100 (Rara)</span>
-              </div>
-              <div className="bg-white/70 p-1.5 rounded-lg border border-surface-container">
-                <span className="text-secondary block text-[0.5625rem]">FSRS</span>
-                <span className="font-bold text-emerald-700">Em dia</span>
-              </div>
-            </div>
-
-            {/* Decisão do Cérebro 2 com ferramenta de setinha */}
-            <div className="pt-1">
-              <button
-                type="button"
-                onClick={() => toggleDecision('doenca-x')}
-                className="inline-flex items-center gap-1 text-xs text-secondary hover:text-on-surface font-semibold transition-colors"
-              >
-                <span className="material-symbols-outlined text-sm">
-                  {expandedDecisions['doenca-x'] ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
-                </span>
-                <span>Decisão do Cérebro 2</span>
-              </button>
-              {expandedDecisions['doenca-x'] && (
-                <p className="text-[0.75rem] text-secondary leading-relaxed pl-3.5 border-l-2 border-primary/30 mt-1 animate-in fade-in">
-                  Não entra no bloco de hoje. Embora tenha a menor nota isolada (65%), sua raridade nas bancas (incidência 20) daria retorno quase nulo na nota final da prova.
-                </p>
-              )}
-            </div>
-
-            <div className="pt-1">
-              <button
-                onClick={() => handleOpenDossier('c-doenca-x', 'Doença X')}
-                className="px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold flex items-center gap-1.5 transition-all border border-surface-container"
-              >
-                <span className="material-symbols-outlined text-sm text-primary">description</span>
-                <span>Ver dossiê: Doença X</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Caso 4: IAM */}
-          <div className="p-4 rounded-xl bg-surface-container-low/50 border border-surface-container space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-on-surface">4️⃣ IAM</span>
-                <span className="px-2 py-0.5 rounded text-[0.625rem] font-bold bg-surface-container text-secondary">
-                  Cardiologia
-                </span>
-              </div>
-              <span className="px-2.5 py-0.5 rounded-full text-[0.6875rem] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                Score: 30 • Baixa 🟢
-              </span>
-            </div>
-
-            <div className="grid grid-cols-4 gap-1.5 text-center text-[0.6875rem]">
-              <div className="bg-white/70 p-1.5 rounded-lg border border-emerald-200">
-                <span className="text-emerald-800 font-bold block text-[0.5625rem]">Domínio C1</span>
-                <span className="font-bold text-emerald-800">89% (≥85%)</span>
-              </div>
-              <div className="bg-white/70 p-1.5 rounded-lg border border-surface-container">
-                <span className="text-secondary block text-[0.5625rem]">Aplicação</span>
-                <span className="font-bold text-on-surface">89%</span>
-              </div>
-              <div className="bg-white/70 p-1.5 rounded-lg border border-surface-container">
-                <span className="text-secondary block text-[0.5625rem]">Incidência</span>
-                <span className="font-bold text-primary">90/100</span>
-              </div>
-              <div className="bg-white/70 p-1.5 rounded-lg border border-surface-container">
-                <span className="text-secondary block text-[0.5625rem]">FSRS</span>
-                <span className="font-bold text-emerald-700">Em dia (32d)</span>
-              </div>
-            </div>
-
-            {/* Decisão do Cérebro 2 com ferramenta de setinha */}
-            <div className="pt-1">
-              <button
-                type="button"
-                onClick={() => toggleDecision('iam')}
-                className="inline-flex items-center gap-1 text-xs text-secondary hover:text-on-surface font-semibold transition-colors"
-              >
-                <span className="material-symbols-outlined text-sm">
-                  {expandedDecisions['iam'] ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
-                </span>
-                <span>Decisão do Cérebro 2</span>
-              </button>
-              {expandedDecisions['iam'] && (
-                <p className="text-[0.75rem] text-secondary leading-relaxed pl-3.5 border-l-2 border-primary/30 mt-1 animate-in fade-in">
-                  Manutenção periódica. O domínio já ultrapassou a meta de 85% e a estabilidade de retenção é alta. Investir tempo agora teria retorno decrescente.
-                </p>
-              )}
-            </div>
-
-            <div className="pt-1">
-              <button
-                onClick={() => handleOpenDossier('c-iam', 'IAM')}
-                className="px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold flex items-center gap-1.5 transition-all border border-surface-container"
-              >
-                <span className="material-symbols-outlined text-sm text-primary">description</span>
-                <span>Ver dossiê: IAM</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* 12. NO FINAL DO DIA */}
       <section className="bg-surface-container-lowest rounded-2xl p-5 border border-surface-container shadow-xs space-y-3">
@@ -1304,21 +849,21 @@ export const HojeView: React.FC<HojeViewProps> = ({
               <div>
                 <span className="text-[0.625rem] uppercase font-bold text-secondary block">Domínio</span>
                 <span className="font-code-metric text-sm font-black text-primary">
-                  {selectedWhyActivity.id === 'act-dpoc' ? '78%' : selectedWhyActivity.id === 'act-icc' ? '83%' : '83%'}
+                  {selectedWhyActivity.whyDetails.domainScore}
                 </span>
               </div>
               <div className="h-6 w-px bg-surface-container" />
               <div>
                 <span className="text-[0.625rem] uppercase font-bold text-secondary block">Aplicação</span>
                 <span className="font-code-metric text-sm font-black text-amber-700">
-                  {selectedWhyActivity.id === 'act-dpoc' ? '71%' : selectedWhyActivity.id === 'act-icc' ? '74%' : '74%'}
+                  {selectedWhyActivity.whyDetails.examScore}
                 </span>
               </div>
               <div className="h-6 w-px bg-surface-container" />
               <div>
                 <span className="text-[0.625rem] uppercase font-bold text-secondary block">Retenção (FSRS)</span>
                 <span className="font-code-metric text-sm font-black text-emerald-700">
-                  {selectedWhyActivity.id === 'act-dpoc' ? '84%' : selectedWhyActivity.id === 'act-icc' ? '88%' : '82%'}
+                  {selectedWhyActivity.whyDetails.examScore}
                 </span>
               </div>
             </div>
