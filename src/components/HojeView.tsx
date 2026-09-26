@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserPreferences, ErrorReasonType, ContentItem, AreaItem } from '../types';
+import { UserPreferences, ErrorReasonType, ContentItem, AreaItem, OslerBlockRecord } from '../types';
 import { getContentState } from '../utils/contentState';
 import { buildTodayPlan, rankContentsByPriority, ContentPriority, ActivityKind } from '../utils/priorityEngine';
 import { getAllCurriculumContents } from '../data/mockData';
@@ -51,6 +51,8 @@ interface HojeViewProps {
   onContentStudied?: (contentId?: string) => void;
   /** Currículo sobreposto (progresso real) para o resumo de progresso. */
   curriculum?: AreaItem[];
+  /** Blocos Osler para ligar o fator revisão no plano do dia. */
+  oslerBlocks?: OslerBlockRecord[];
 }
 
 export const HojeView: React.FC<HojeViewProps> = ({
@@ -59,6 +61,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
   onNavigateToCurriculo,
   onContentStudied,
   curriculum,
+  oslerBlocks = [],
 }) => {
   // Cota de disponibilidade diária (padrão 100 min / 1h40)
   const [availableTodayMin, setAvailableTodayMin] = useState<number>(100);
@@ -106,8 +109,8 @@ export const HojeView: React.FC<HojeViewProps> = ({
 
   // Plano de hoje gerado pelo motor real, a partir do currículo + tempo.
   const recommendedPlan = React.useMemo(
-    () => planToActivities(buildTodayPlan(curriculum ?? [], availableTodayMin)),
-    [curriculum, availableTodayMin]
+    () => planToActivities(buildTodayPlan(curriculum ?? [], availableTodayMin, 2, oslerBlocks)),
+    [curriculum, availableTodayMin, oslerBlocks]
   );
 
   // Activities for Today (derivadas do plano real; recomputam se o tempo muda).
@@ -127,7 +130,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
   // NÃO entraram no plano de hoje (dados reais, não lista fixa).
   const alternativeActivities: ActivityItem[] = React.useMemo(() => {
     const planIds = new Set(recommendedPlan.map((a) => a.contentId));
-    const rest = rankContentsByPriority(curriculum ?? [])
+    const rest = rankContentsByPriority(curriculum ?? [], oslerBlocks)
       .filter((c) => c.priorityScore > 0 && !planIds.has(c.contentId))
       .slice(0, 6);
     return planToActivities(rest);

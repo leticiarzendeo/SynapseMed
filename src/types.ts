@@ -102,6 +102,29 @@ export interface OslerCardDistribution {
   total: number;
 }
 
+// Registro agregado de um bloco/tópico Osler, informado pela usuária a partir
+// do desempenho que o Osler já calcula. NAO reproduz o historico cartao a cartao
+// (o Osler e o especialista); o SynapseMed usa esse agregado para estimar a
+// retencao do bloco e agendar a revisao.
+export interface OslerBlockRecord {
+  id: string;
+  contentId: string;
+  blockName: string;
+  totalCards: number;
+  easy: number;
+  normal: number;
+  hard: number;
+  wrong: number;
+  retention: number;        // 0-100 (calculado da distribuicao)
+  lastInformedDate: string; // YYYY-MM-DD
+  nextReviewDate: string;   // YYYY-MM-DD (regra simples)
+  history: {
+    date: string;
+    easy: number; normal: number; hard: number; wrong: number;
+    retention: number;
+  }[];
+}
+
 export interface FSRSMemoryState {
   stabilityDays: number; // S (dias que a memória permanece estável)
   difficulty: number; // D (1 a 10)
