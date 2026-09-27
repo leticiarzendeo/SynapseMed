@@ -28,10 +28,11 @@
 // (recommendActivity), olhando qual dimensão está mais deficiente.
 // ============================================================================
 
-import { ContentItem, AreaItem } from '../types';
+import { ContentItem, AreaItem, OslerBlockRecord } from '../types';
 import { calculateContentDomain } from './domainCalculator';
 import { isMedwayPriority } from './medwayPriorityEngine';
 import { getContentState, ContentState } from './contentState';
+import { contentReviewNeed } from './retentionEngine';
 
 const META_DOMINIO = 85;
 const INCID_BASE = 0.35;          // piso do modo SUAVIZADO
@@ -170,13 +171,30 @@ export function calculateContentPriority(
   };
 }
 
-/** Prioridade de todos os conteúdos de uma hierarquia, ordenada desc. */
-export function rankContentsByPriority(hierarchy: readonly AreaItem[]): ContentPriority[] {
+/** Prioridade de todos os conteúdos de uma hierarquia, ordenada desc.
+ *  oslerBlocks (opcional) "liga" o fator revisão por conteúdo. */
+export function rankContentsByPriority(
+  hierarchy: readonly AreaItem[],
+  oslerBlocks: readonly OslerBlockRecord[] = [],
+  paceFactor = 0
+): ContentPriority[] {
+  // agrupa blocos por conteúdo para calcular necessidade de revisão
+  const blocksByContent = new Map<string, OslerBlockRecord[]>();
+  for (const b of oslerBlocks) {
+    if (!blocksByContent.has(b.contentId)) blocksByContent.set(b.contentId, []);
+    blocksByContent.get(b.contentId)!.push(b);
+  }
   const out: ContentPriority[] = [];
   for (const area of hierarchy)
     for (const mod of area.modules)
-      for (const c of mod.contents)
-        out.push(calculateContentPriority(c, mod.name));
+      for (const c of mod.contents) {
+        const blocks = blocksByContent.get(c.id) ?? [];
+        const revisao = blocks.length ? contentReviewNeed(blocks) : 0;
+        // prazo empurra especialmente o AVANÇO curricular (conteúdo não iniciado)
+        const st = getContentState(c);
+        const prazo = st === 'nao_iniciado' ? paceFactor : paceFactor * 0.3;
+        out.push(calculateContentPriority(c, mod.name, { revisao, prazo }));
+      }
   out.sort((a, b) => b.priorityScore - a.priorityScore);
   return out;
 }
@@ -193,9 +211,11 @@ export function rankContentsByPriority(hierarchy: readonly AreaItem[]): ContentP
 export function buildTodayPlan(
   hierarchy: readonly AreaItem[],
   availableMinutes: number,
-  maxActivities = 2
+  maxActivities = 2,
+  oslerBlocks: readonly OslerBlockRecord[] = [],
+  paceFactor = 0
 ): ContentPriority[] {
-  const ranked = rankContentsByPriority(hierarchy).filter((c) => c.priorityScore > 0);
+  const ranked = rankContentsByPriority(hierarchy, oslerBlocks, paceFactor).filter((c) => c.priorityScore > 0);
   const plan: ContentPriority[] = [];
   const usedModules = new Set<string>();
   let used = 0;
