@@ -5,33 +5,35 @@ import {
   PlanningActivityItem,
   DayCapacityConfig,
   PlanningCategory,
+  AreaItem,
+  OslerBlockRecord,
 } from '../types';
 import {
   DEFAULT_WEEK_DAYS,
   WEEK_PRESETS,
-  CANONICAL_PLANNING_ACTIVITIES,
   getAdaptiveWeeklyBudget,
   ICC_TWO_YEAR_FSRS_LADDER,
   PROVISIONAL_EVIDENCE_CASE,
   calculateDeficitImpact,
   DURATION_CALIBRATION_FACTORS,
 } from '../utils/planningEngine';
+import { buildWeeklyPlan, ContentPriority } from '../utils/priorityEngine';
+import { computePace } from '../utils/paceEngine';
 
 interface PlanejamentoViewProps {
   preferences: UserPreferences;
   onOpenAjustarMetas?: () => void;
-  /**
-   * "A ponte": avisa o App (fonte da verdade) que o conteúdo de um contentId
-   * foi concluído, para propagar ao currículo/domínio/priorização sem migrar
-   * o modelo interno PlanningActivityItem.
-   */
   onContentStudied?: (contentId?: string) => void;
+  curriculum?: AreaItem[];
+  oslerBlocks?: OslerBlockRecord[];
 }
 
 export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
   preferences,
   onOpenAjustarMetas,
   onContentStudied,
+  curriculum,
+  oslerBlocks = [],
 }) => {
   // Mode: 🤖 Recomendação do Algoritmo vs 👤 Seu Plano
   const [viewLayer, setViewLayer] = useState<'algoritmo' | 'usuario'>('usuario');
@@ -45,7 +47,58 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
   // Weekly capacity & presets
   const [currentPreset, setCurrentPreset] = useState<WeekPresetType>('normal_8h');
   const [days, setDays] = useState<DayCapacityConfig[]>(DEFAULT_WEEK_DAYS);
-  const [activities, setActivities] = useState<PlanningActivityItem[]>(CANONICAL_PLANNING_ACTIVITIES);
+
+  // Mapeia a categoria/tipo da atividade a partir da recomendação do motor.
+  const ACT_MAP: Record<string, { subType: string; category: PlanningCategory }> = {
+    avanco: { subType: 'Teoria Medway', category: 'avanco' },
+    exercicios: { subType: 'Exercícios Medway', category: 'avanco' },
+    questoes: { subType: 'Questões de provas reais', category: 'aplicacao' },
+    revisao: { subType: 'Revisão / Osler', category: 'manutencao' },
+  };
+  const DAY_KEYS = ['segunda', 'terca', 'quarta', 'quinta', 'sexta'];
+
+  const cpToPlanning = (cp: ContentPriority, dayKey: string): PlanningActivityItem => {
+    const m = ACT_MAP[cp.recommendedActivity] ?? ACT_MAP.avanco;
+    return {
+      id: `plan-${cp.contentId}-${cp.recommendedActivity}`,
+      contentId: cp.contentId,
+      name: cp.contentName,
+      subType: m.subType,
+      type: 'estudo' as any,
+      category: m.category,
+      durationMin: cp.estimatedMinutes,
+      priorityScore: cp.priorityScore,
+      efficiencyPointsPerMin: cp.priorityScore / Math.max(1, cp.estimatedMinutes),
+      specialty: cp.moduleName,
+      modulo: cp.moduleName,
+      recommendedDay: dayKey,
+      currentDay: dayKey,
+      status: 'pendente',
+      whyNow: cp.reason,
+    };
+  };
+
+  // Plano semanal REAL: distribui as prioridades nos dias úteis (seg–sex),
+  // respeitando a capacidade de cada dia. A usuária pode ajustar depois.
+  const pace = React.useMemo(() => computePace(curriculum ?? []), [curriculum]);
+  const recommendedWeek = React.useMemo(() => {
+    const weekdayCaps = DAY_KEYS.map((k) => {
+      const d = days.find((x) => x.key === k);
+      return { key: k, label: k.toUpperCase(), capacityMin: d?.capacityMin ?? 96 };
+    });
+    const plan = buildWeeklyPlan(curriculum ?? [], weekdayCaps, oslerBlocks, pace.paceFactor);
+    const acts: PlanningActivityItem[] = [];
+    for (const day of plan) {
+      for (const cp of day.activities) acts.push(cpToPlanning(cp, day.key));
+    }
+    return acts;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [curriculum, oslerBlocks, pace.paceFactor, days]);
+
+  const [activities, setActivities] = useState<PlanningActivityItem[]>(recommendedWeek);
+  React.useEffect(() => {
+    setActivities(recommendedWeek);
+  }, [recommendedWeek]);
 
   // Phase preview selector for weekly budget (Início, Meio, Final)
   const [budgetPhasePreview, setBudgetPhasePreview] = useState<'inicio' | 'meio' | 'final'>('meio');
@@ -226,7 +279,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
 
   // Recalcular Tudo
   const handleRecalculateAll = () => {
-    setActivities(CANONICAL_PLANNING_ACTIVITIES);
+    setActivities(recommendedWeek);
     showToast('✨ Algoritmo reorganizou a semana inteira: dependências respeitadas e fila ordenada por eficiência.');
   };
 
@@ -273,11 +326,13 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
 
           {/* Status Geral de Ritmo */}
           <div className="flex items-center gap-2">
-            <div className="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="text-xs font-black text-emerald-900">🟢 DENTRO DO RITMO</span>
-              <span className="text-[0.6875rem] text-emerald-700 font-medium">
-                (Necessário: 7h35/sem • Disponível: {totalWeeklyCapacityHours}h)
+            <div className="px-3 py-1.5 rounded-xl bg-surface-container-low border border-surface-container flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ background: pace.status === 'atrasada' ? '#dc2626' : pace.status === 'adiantada' ? '#2563eb' : '#16a34a' }}></span>
+              <span className="text-xs font-black text-on-surface">
+                {pace.status === 'atrasada' ? '🔴 ATENÇÃO AO RITMO' : pace.status === 'adiantada' ? '🔵 ADIANTADA' : pace.status === 'concluido' ? '🟢 CONCLUÍDO' : '🟢 NO RITMO'}
+              </span>
+              <span className="text-[0.6875rem] text-secondary font-medium">
+                (Necessário: {pace.contentsPerWeekNeeded}/sem • Disponível: {totalWeeklyCapacityHours}h)
               </span>
             </div>
           </div>
@@ -348,7 +403,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                 <span>Relógio dos 2 Anos</span>
               </span>
               <span className="text-[0.6875rem] font-bold px-2 py-0.5 rounded-md bg-purple-100 text-purple-900">
-                96 semanas restantes
+                {pace.weeksRemaining} semanas restantes
               </span>
             </div>
             <div className="flex items-baseline gap-2">
@@ -895,6 +950,60 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
       {/* ========================================================================= */}
       {activeTab === 'dois_anos_horizonte' && (
         <div className="space-y-6">
+          {/* PAINEL REAL DE RITMO (paceEngine — meta 1/dez/2028) */}
+          <section
+            className="rounded-3xl p-6 border shadow-xs space-y-4"
+            style={{
+              background:
+                pace.status === 'atrasada' ? '#fef2f2'
+                : pace.status === 'adiantada' ? '#eff6ff'
+                : pace.status === 'concluido' ? '#f0fdf4' : '#fffbeb',
+              borderColor:
+                pace.status === 'atrasada' ? '#fecaca'
+                : pace.status === 'adiantada' ? '#bfdbfe'
+                : pace.status === 'concluido' ? '#bbf7d0' : '#fde68a',
+            }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <span className="text-[0.6875rem] font-bold text-secondary uppercase tracking-wider">
+                  Horizonte até 1º/dez/2028
+                </span>
+                <h2 className="text-xl font-black text-on-surface mt-1">
+                  {pace.status === 'atrasada' ? 'Atenção ao ritmo'
+                    : pace.status === 'adiantada' ? 'Você está adiantada'
+                    : pace.status === 'concluido' ? 'Currículo concluído' : 'No ritmo'}
+                </h2>
+                <p className="text-xs text-secondary mt-1 max-w-2xl leading-relaxed">{pace.message}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-center">
+              <div className="p-3 rounded-2xl bg-surface-container-lowest border border-surface-container">
+                <div className="text-2xl font-black text-primary">{pace.dominados}/{pace.totalContents}</div>
+                <div className="text-[0.625rem] text-secondary uppercase">consolidados</div>
+              </div>
+              <div className="p-3 rounded-2xl bg-surface-container-lowest border border-surface-container">
+                <div className="text-2xl font-black text-on-surface">{pace.restantes}</div>
+                <div className="text-[0.625rem] text-secondary uppercase">restantes</div>
+              </div>
+              <div className="p-3 rounded-2xl bg-surface-container-lowest border border-surface-container">
+                <div className="text-2xl font-black text-on-surface">{pace.weeksRemaining}</div>
+                <div className="text-[0.625rem] text-secondary uppercase">semanas p/ meta</div>
+              </div>
+              <div className="p-3 rounded-2xl bg-surface-container-lowest border border-surface-container">
+                <div className="text-2xl font-black text-on-surface">
+                  {pace.contentsPerWeekNeeded}
+                </div>
+                <div className="text-[0.625rem] text-secondary uppercase">
+                  conteúdos/sem necessários
+                </div>
+              </div>
+            </div>
+            <p className="text-[0.625rem] text-secondary text-center">
+              Capacidade base de {pace.contentsPerWeekBase} conteúdos/semana (8h). "Coberto" = conteúdo consolidado (domínio ≥ 85%).
+            </p>
+          </section>
+
           {/* PAINEL CENTRAL DA REGRA DE 2 ANOS */}
           <section className="bg-surface-container-lowest rounded-3xl p-6 border border-surface-container shadow-xs space-y-4">
             <div className="flex items-start justify-between gap-3 border-b border-surface-container pb-4">
@@ -966,7 +1075,8 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                 </h3>
               </div>
               <p className="text-xs text-secondary mt-0.5">
-                Veja como o espaçamento FSRS atua do Mês 1 ao Mês 20, como trata a queda de domínio (88% → 79%) e como o conhecimento nunca é "aposentado".
+                <strong>Exemplo ilustrativo</strong> de como o espaçamento FSRS atua ao longo dos 2 anos
+                e trata a queda de domínio — não reflete seus dados atuais.
               </p>
             </div>
 
