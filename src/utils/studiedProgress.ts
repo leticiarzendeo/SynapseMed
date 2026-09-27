@@ -24,8 +24,9 @@
 // Tudo aqui é puro e não muta a hierarquia original importada.
 // ============================================================================
 
-import { AreaItem, ModuleItem, ContentItem, StudyActivity } from '../types';
+import { AreaItem, ModuleItem, ContentItem, StudyActivity, OslerBlockRecord, OslerCardDistribution } from '../types';
 import { getStateTotals, getContentState } from './contentState';
+import { contentRetention } from './retentionEngine';
 
 /**
  * Deriva o conjunto de contentIds efetivamente concluídos a partir das
@@ -92,20 +93,26 @@ function deriveLastStudiedDates(
 export function applyStudiedOverlay(
   hierarchy: readonly AreaItem[],
   studiedContentIds: ReadonlySet<string>,
-  lastStudiedDates?: ReadonlyMap<string, string>
+  lastStudiedDates?: ReadonlyMap<string, string>,
+  retentionByContent?: ReadonlyMap<string, { retention: number; distribution: OslerCardDistribution }>
 ): AreaItem[] {
   return hierarchy.map((area) => {
     const modules: ModuleItem[] = area.modules.map((mod) => {
       const contents: ContentItem[] = mod.contents.map((content) => {
-        if (!studiedContentIds.has(content.id)) {
-          return content;
-        }
+        const ret = retentionByContent?.get(content.id);
+        const isStudied = studiedContentIds.has(content.id) || !!ret;
+        if (!isStudied) return content;
         const lastDate = lastStudiedDates?.get(content.id);
         const overlaid: ContentItem = {
           ...content,
           isStudied: true,
           theoryCompleted: true,
           lastStudiedDate: lastDate ?? content.lastStudiedDate,
+          // Liga a RETENÇÃO informada (aba Revisões) ao cálculo de domínio:
+          // o domainCalculator já lê content.oslerCards.retentionRate.
+          ...(ret
+            ? { oslerCards: { distribution: ret.distribution, retentionRate: ret.retention } }
+            : {}),
         };
         return overlaid;
       });
@@ -152,7 +159,8 @@ export function applyStudiedOverlay(
 export function buildStudiedCurriculum(
   baseHierarchy: readonly AreaItem[],
   activities: readonly StudyActivity[],
-  extraStudiedContentIds?: readonly string[]
+  extraStudiedContentIds?: readonly string[],
+  oslerBlocks?: readonly OslerBlockRecord[]
 ): { curriculum: AreaItem[]; studiedContentIds: Set<string> } {
   const studiedContentIds = deriveStudiedContentIds(activities);
   // Conteúdos marcados como concluídos por telas com modelo próprio
@@ -162,13 +170,44 @@ export function buildStudiedCurriculum(
       if (id) studiedContentIds.add(id);
     }
   }
+  // Retenção informada (aba Revisões), agregada por conteúdo, para injetar no
+  // overlay e alimentar a dimensão retenção do domínio.
+  const retentionByContent = oslerBlocks && oslerBlocks.length
+    ? aggregateRetentionByContent(oslerBlocks)
+    : undefined;
   const lastStudiedDates = deriveLastStudiedDates(activities);
   const curriculum = applyStudiedOverlay(
     baseHierarchy,
     studiedContentIds,
-    lastStudiedDates
+    lastStudiedDates,
+    retentionByContent
   );
   return { curriculum, studiedContentIds };
+}
+
+/** Agrega blocos Osler por conteúdo -> retenção + distribuição somada. */
+function aggregateRetentionByContent(
+  blocks: readonly OslerBlockRecord[]
+): Map<string, { retention: number; distribution: OslerCardDistribution }> {
+  const byContent = new Map<string, OslerBlockRecord[]>();
+  for (const b of blocks) {
+    if (!byContent.has(b.contentId)) byContent.set(b.contentId, []);
+    byContent.get(b.contentId)!.push(b);
+  }
+  const out = new Map<string, { retention: number; distribution: OslerCardDistribution }>();
+  for (const [cid, bs] of byContent) {
+    const ret = contentRetention(bs);
+    if (ret === null) continue;
+    const distribution: OslerCardDistribution = {
+      facil: bs.reduce((s, b) => s + b.easy, 0),
+      normal: bs.reduce((s, b) => s + b.normal, 0),
+      dificil: bs.reduce((s, b) => s + b.hard, 0),
+      errei: bs.reduce((s, b) => s + b.wrong, 0),
+      total: bs.reduce((s, b) => s + b.totalCards, 0),
+    };
+    out.set(cid, { retention: ret, distribution });
+  }
+  return out;
 }
 
 /**
