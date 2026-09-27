@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { UserPreferences, ErrorReasonType, ContentItem, AreaItem } from '../types';
+import { UserPreferences, ErrorReasonType, ContentItem, AreaItem, OslerBlockRecord } from '../types';
 import { getContentState } from '../utils/contentState';
 import { buildTodayPlan, rankContentsByPriority, ContentPriority, ActivityKind } from '../utils/priorityEngine';
+import { computePace } from '../utils/paceEngine';
 import { getAllCurriculumContents } from '../data/mockData';
 import { DominioDossieModal } from './DominioDossieModal';
 
@@ -51,6 +52,8 @@ interface HojeViewProps {
   onContentStudied?: (contentId?: string) => void;
   /** Currículo sobreposto (progresso real) para o resumo de progresso. */
   curriculum?: AreaItem[];
+  /** Blocos Osler para ligar o fator revisão no plano do dia. */
+  oslerBlocks?: OslerBlockRecord[];
 }
 
 export const HojeView: React.FC<HojeViewProps> = ({
@@ -59,6 +62,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
   onNavigateToCurriculo,
   onContentStudied,
   curriculum,
+  oslerBlocks = [],
 }) => {
   // Cota de disponibilidade diária (padrão 100 min / 1h40)
   const [availableTodayMin, setAvailableTodayMin] = useState<number>(100);
@@ -104,10 +108,13 @@ export const HojeView: React.FC<HojeViewProps> = ({
       currentDay: 'hoje',
     }));
 
-  // Plano de hoje gerado pelo motor real, a partir do currículo + tempo.
+  // Ritmo/prazo (meta dez/2028): informa a pressão de prazo p/ o motor.
+  const pace = React.useMemo(() => computePace(curriculum ?? []), [curriculum]);
+
+  // Plano de hoje gerado pelo motor real, a partir do currículo + tempo + prazo.
   const recommendedPlan = React.useMemo(
-    () => planToActivities(buildTodayPlan(curriculum ?? [], availableTodayMin)),
-    [curriculum, availableTodayMin]
+    () => planToActivities(buildTodayPlan(curriculum ?? [], availableTodayMin, 2, oslerBlocks, pace.paceFactor)),
+    [curriculum, availableTodayMin, oslerBlocks, pace.paceFactor]
   );
 
   // Activities for Today (derivadas do plano real; recomputam se o tempo muda).
@@ -127,7 +134,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
   // NÃO entraram no plano de hoje (dados reais, não lista fixa).
   const alternativeActivities: ActivityItem[] = React.useMemo(() => {
     const planIds = new Set(recommendedPlan.map((a) => a.contentId));
-    const rest = rankContentsByPriority(curriculum ?? [])
+    const rest = rankContentsByPriority(curriculum ?? [], oslerBlocks)
       .filter((c) => c.priorityScore > 0 && !planIds.has(c.contentId))
       .slice(0, 6);
     return planToActivities(rest);
@@ -410,6 +417,38 @@ export const HojeView: React.FC<HojeViewProps> = ({
               {btn.label}
             </button>
           ))}
+        </div>
+      </section>
+
+      {/* Indicador de RITMO / PRAZO (meta dez/2028) */}
+      <section
+        className="rounded-2xl p-4 border shadow-xs flex items-start gap-3"
+        style={{
+          background:
+            pace.status === 'atrasada' ? '#fef2f2'
+            : pace.status === 'adiantada' ? '#eff6ff'
+            : pace.status === 'concluido' ? '#f0fdf4'
+            : '#fffbeb',
+          borderColor:
+            pace.status === 'atrasada' ? '#fecaca'
+            : pace.status === 'adiantada' ? '#bfdbfe'
+            : pace.status === 'concluido' ? '#bbf7d0'
+            : '#fde68a',
+        }}
+      >
+        <span className="material-symbols-outlined"
+          style={{ color:
+            pace.status === 'atrasada' ? '#dc2626'
+            : pace.status === 'adiantada' ? '#2563eb'
+            : pace.status === 'concluido' ? '#16a34a' : '#d97706' }}>
+          {pace.status === 'atrasada' ? 'warning'
+            : pace.status === 'concluido' ? 'check_circle' : 'schedule'}
+        </span>
+        <div className="text-sm">
+          <div className="font-semibold text-on-surface">
+            Ritmo para dez/2028 — {pace.dominados}/{pace.totalContents} conteúdos consolidados
+          </div>
+          <div className="text-secondary text-xs mt-0.5">{pace.message}</div>
         </div>
       </section>
 
