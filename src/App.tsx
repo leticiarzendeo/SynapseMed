@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ViewPath, StudyActivity, UserPreferences, SessionCompletionReport, CadernoErroItem, EvidenceRecord } from './types';
+import { ViewPath, StudyActivity, UserPreferences, SessionCompletionReport, CadernoErroItem, EvidenceRecord, OslerBlockRecord } from './types';
+import { upsertBlockRecord } from './utils/retentionEngine';
 import { initialActivities, initialPreferences, initialCadernoErros, fullCurriculumHierarchy } from './data/mockData';
 import { buildStudiedCurriculum } from './utils/studiedProgress';
 import { Sidebar } from './components/Sidebar';
@@ -101,7 +102,20 @@ export default function App() {
     return [];
   });
 
-  // Modal controls
+  // Registros agregados de blocos Osler (retenção/memória informada pela usuária)
+  const [oslerBlocks, setOslerBlocks] = useState<OslerBlockRecord[]>(() => {
+    const saved = localStorage.getItem('synapsemed_osler_blocks');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
   const [coordinatingActivity, setCoordinatingActivity] = useState<StudyActivity | null>(null);
   const [showRegistrarModal, setShowRegistrarModal] = useState(false);
   const [showAjustarMetasModal, setShowAjustarMetasModal] = useState(false);
@@ -130,6 +144,10 @@ export default function App() {
     localStorage.setItem('synapsemed_evidence_log', JSON.stringify(evidenceLog));
   }, [evidenceLog]);
 
+  useEffect(() => {
+    localStorage.setItem('synapsemed_osler_blocks', JSON.stringify(oslerBlocks));
+  }, [oslerBlocks]);
+
   // A PONTE: telas com modelo próprio chamam isto ao concluir uma atividade,
   // passando apenas o contentId. Assim a conclusão propaga para o currículo,
   // domínio e priorização sem migrar os tipos internos dessas telas.
@@ -151,6 +169,25 @@ export default function App() {
     setCadernoErros((prev) => [item, ...prev]);
   };
 
+  // Salva/atualiza um bloco Osler informado pela usuária (retenção/memória).
+  const handleSaveOslerBlock = (input: {
+    contentId: string; blockName: string;
+    totalCards: number; easy: number; normal: number; hard: number; wrong: number;
+  }) => {
+    setOslerBlocks((prev) => {
+      const existing = prev.find(
+        (b) => b.contentId === input.contentId && b.blockName === input.blockName
+      );
+      const updated = upsertBlockRecord(existing, input);
+      if (existing) {
+        return prev.map((b) => (b.id === existing.id ? updated : b));
+      }
+      return [updated, ...prev];
+    });
+    // marca o conteúdo como estudado (houve contato de memória real)
+    if (input.contentId) handleContentStudied(input.contentId);
+  };
+
   // ============================================================
   // FONTE DA VERDADE DO PROGRESSO CURRICULAR
   // Sobrepõe ao currículo estático os conteúdos efetivamente
@@ -160,8 +197,8 @@ export default function App() {
   // domainCalculator e priorização.
   // ============================================================
   const { curriculum: studiedCurriculum, studiedContentIds } = useMemo(
-    () => buildStudiedCurriculum(fullCurriculumHierarchy, activities, manualStudiedContentIds),
-    [activities, manualStudiedContentIds]
+    () => buildStudiedCurriculum(fullCurriculumHierarchy, activities, manualStudiedContentIds, oslerBlocks),
+    [activities, manualStudiedContentIds, oslerBlocks]
   );
 
   const showToast = (msg: string) => {
@@ -304,6 +341,7 @@ export default function App() {
       localStorage.removeItem('synapsemed_caderno_erros');
       localStorage.removeItem('synapsemed_manual_studied');
       localStorage.removeItem('synapsemed_evidence_log');
+      localStorage.removeItem('synapsemed_osler_blocks');
       localStorage.removeItem('synapsemed_weekly_completed_minutes');
       localStorage.setItem('synapsemed_storage_version', CURRENT_STORAGE_VERSION);
     }
@@ -312,6 +350,7 @@ export default function App() {
     setCadernoErros(initialCadernoErros);
     setManualStudiedContentIds([]);
     setEvidenceLog([]);
+    setOslerBlocks([]);
     setCurrentPath('hoje');
     showToast('Ambiente restaurado para o início dos estudos (0% concluído).');
   };
@@ -402,6 +441,7 @@ export default function App() {
               onNavigateToCurriculo={() => setCurrentPath('curriculo')}
               onContentStudied={handleContentStudied}
               curriculum={studiedCurriculum}
+              oslerBlocks={oslerBlocks}
             />
           )}
 
@@ -436,7 +476,11 @@ export default function App() {
           )}
 
           {currentPath === 'revisoes' && (
-            <RevisoesView onOpenSRSCoordination={handleStartSRSQueue} />
+            <RevisoesView
+              curriculum={studiedCurriculum}
+              oslerBlocks={oslerBlocks}
+              onSaveOslerBlock={handleSaveOslerBlock}
+            />
           )}
 
           {currentPath === 'provas-e-simulados' && (
