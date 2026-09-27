@@ -138,7 +138,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
   const remainingHoursInWeek = Math.max(0, Number((totalPlannedHours - totalCompletedHours).toFixed(1)));
 
   const weeklyBudget = getAdaptiveWeeklyBudget(totalWeeklyCapacityHours, budgetPhasePreview);
-  const deficitState = calculateDeficitImpact(simulatedDeficitHours, totalWeeklyCapacityHours, 96);
+  const deficitState = calculateDeficitImpact(simulatedDeficitHours, totalWeeklyCapacityHours, pace.weeksRemaining);
 
   // Trocar Preset
   const handleSelectPreset = (presetKey: WeekPresetType) => {
@@ -1207,7 +1207,91 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
               </p>
             </div>
 
-            {/* Seletor de Cenários */}
+            {/* Campo livre: quantas horas você perdeu */}
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+              <div className="flex-1">
+                <label className="text-[0.6875rem] font-bold text-secondary uppercase tracking-wider block mb-1">
+                  Quantas horas de estudo você perdeu?
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={simulatedDeficitHours}
+                  onChange={(e) => setSimulatedDeficitHours(Math.max(0, Number(e.target.value)))}
+                  className="w-full px-3 py-2.5 rounded-xl border border-surface-container bg-surface-container-lowest text-sm font-code-metric"
+                  placeholder="ex: 3"
+                />
+              </div>
+              <div className="flex gap-2">
+                {[3, 8, 16, 40].map((h) => (
+                  <button
+                    key={h}
+                    onClick={() => setSimulatedDeficitHours(h)}
+                    className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all ${
+                      simulatedDeficitHours === h
+                        ? 'bg-primary text-white border-primary'
+                        : 'bg-surface-container-low border-surface-container text-secondary hover:border-primary/40'
+                    }`}
+                  >
+                    {h}h
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Resultado dinâmico do cálculo (paceEngine + amortização) */}
+            <div
+              className="p-5 rounded-2xl border space-y-3"
+              style={{
+                background: deficitState.isPaceExceeded ? '#fffbeb' : '#f0fdf4',
+                borderColor: deficitState.isPaceExceeded ? '#fde68a' : '#bbf7d0',
+              }}
+            >
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <span className="text-xs font-black flex items-center gap-1.5"
+                  style={{ color: deficitState.isPaceExceeded ? '#92400e' : '#166534' }}>
+                  <span>{deficitState.isPaceExceeded ? '🟠' : '🟢'}</span>
+                  <span>
+                    {deficitState.isPaceExceeded
+                      ? 'Déficit relevante — ritmo precisa aumentar'
+                      : 'Amortização suave — diluído sem sobrecarga'}
+                  </span>
+                </span>
+                <span className="text-xs font-bold font-code-metric"
+                  style={{ color: deficitState.isPaceExceeded ? '#92400e' : '#166534' }}>
+                  Déficit: {deficitState.accumulatedDeficitHours}h
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-center">
+                <div className="p-3 rounded-xl bg-surface-container-lowest border border-surface-container">
+                  <div className="text-lg font-black text-on-surface font-code-metric">
+                    +{deficitState.amortizationPerWeekMin} min
+                  </div>
+                  <div className="text-[0.5625rem] text-secondary uppercase">por semana</div>
+                </div>
+                <div className="p-3 rounded-xl bg-surface-container-lowest border border-surface-container">
+                  <div className="text-lg font-black text-on-surface font-code-metric">
+                    {deficitState.paceNeededHours}h
+                  </div>
+                  <div className="text-[0.5625rem] text-secondary uppercase">ritmo/semana</div>
+                </div>
+                <div className="p-3 rounded-xl bg-surface-container-lowest border border-surface-container">
+                  <div className="text-lg font-black text-on-surface font-code-metric">
+                    {pace.weeksRemaining}
+                  </div>
+                  <div className="text-[0.5625rem] text-secondary uppercase">semanas p/ diluir</div>
+                </div>
+              </div>
+              <p className="text-xs leading-relaxed"
+                style={{ color: deficitState.isPaceExceeded ? '#78350f' : '#14532d' }}>
+                {deficitState.isPaceExceeded
+                  ? `Em vez de jogar tudo na semana seguinte, o sistema dilui as ${deficitState.accumulatedDeficitHours}h ao longo das ${pace.weeksRemaining} semanas restantes até dez/2028, elevando o ritmo para ~${deficitState.paceNeededHours}h/semana. Considere também concentrar recuperação em semanas de férias.`
+                  : `As ${deficitState.accumulatedDeficitHours}h perdidas são diluídas ao longo das ${pace.weeksRemaining} semanas restantes (+${deficitState.amortizationPerWeekMin} min/semana). Sem sobrecarga e sem impacto no prazo de dez/2028.`}
+              </p>
+            </div>
+
+            {/* Bloco antigo de cenários fixos (mantido oculto/removido abaixo) */}
+            <div style={{ display: 'none' }}>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setSimulatedDeficitHours(3)}
@@ -1318,6 +1402,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                 </div>
               </div>
             )}
+            </div>{/* fim do bloco oculto de cenários fixos */}
           </section>
         </div>
       )}
