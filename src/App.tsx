@@ -450,6 +450,8 @@ export default function App() {
               preferences={preferences}
               onOpenAjustarMetas={() => setShowAjustarMetasModal(true)}
               onContentStudied={handleContentStudied}
+              curriculum={studiedCurriculum}
+              oslerBlocks={oslerBlocks}
             />
           )}
 
