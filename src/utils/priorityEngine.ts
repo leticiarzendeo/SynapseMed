@@ -200,6 +200,80 @@ export function rankContentsByPriority(
 }
 
 /**
+ * PLANO SEMANAL: distribui as prioridades reais pelos dias (seg–sex por padrão),
+ * respeitando a capacidade de cada dia. Espalha entre módulos (variedade) e não
+ * fragmenta. Retorna, por dia, a lista de atividades que cabem.
+ *
+ * days: capacidade (minutos) de cada dia, na ordem desejada.
+ */
+export interface WeekDayPlan {
+  key: string;
+  label: string;
+  capacityMin: number;
+  activities: ContentPriority[];
+  usedMin: number;
+}
+
+export function buildWeeklyPlan(
+  hierarchy: readonly AreaItem[],
+  days: { key: string; label: string; capacityMin: number }[],
+  oslerBlocks: readonly OslerBlockRecord[] = [],
+  paceFactor = 0
+): WeekDayPlan[] {
+  const ranked = rankContentsByPriority(hierarchy, oslerBlocks, paceFactor)
+    .filter((c) => c.priorityScore > 0);
+
+  const plan: WeekDayPlan[] = days.map((d) => ({
+    key: d.key, label: d.label, capacityMin: d.capacityMin, activities: [], usedMin: 0,
+  }));
+
+  const usedContentIds = new Set<string>();
+  const moduleCountWeek: Record<string, number> = {};
+  // distribui em rodadas: em cada rodada, tenta pôr 1 atividade por dia.
+  // Na escolha, entre os candidatos que cabem e respeitam variedade no dia,
+  // prefere o de módulo MENOS usado na semana (espalha os módulos), e só então
+  // por prioridade — assim não concentra tudo num módulo quando há empate.
+  let progress = true;
+  while (progress) {
+    progress = false;
+    for (const day of plan) {
+      const modsInDay = new Set(day.activities.map((a) => a.moduleName));
+      const viable = ranked.filter(
+        (c) =>
+          !usedContentIds.has(c.contentId) &&
+          day.usedMin + c.estimatedMinutes <= day.capacityMin &&
+          !modsInDay.has(c.moduleName)
+      );
+      if (!viable.length) continue;
+      // ordena por (módulo menos usado na semana) e depois por prioridade desc
+      viable.sort((a, b) => {
+        const ma = moduleCountWeek[a.moduleName] ?? 0;
+        const mb = moduleCountWeek[b.moduleName] ?? 0;
+        if (ma !== mb) return ma - mb;
+        return b.priorityScore - a.priorityScore;
+      });
+      const candidate = viable[0];
+      day.activities.push(candidate);
+      day.usedMin += candidate.estimatedMinutes;
+      usedContentIds.add(candidate.contentId);
+      moduleCountWeek[candidate.moduleName] = (moduleCountWeek[candidate.moduleName] ?? 0) + 1;
+      progress = true;
+    }
+  }
+  // 2ª passada: preenche folgas mesmo repetindo módulo, se ainda couber
+  for (const day of plan) {
+    for (const c of ranked) {
+      if (usedContentIds.has(c.contentId)) continue;
+      if (day.usedMin + c.estimatedMinutes > day.capacityMin) continue;
+      day.activities.push(c);
+      day.usedMin += c.estimatedMinutes;
+      usedContentIds.add(c.contentId);
+    }
+  }
+  return plan;
+}
+
+/**
  * Monta o PLANO DE HOJE.
  * Regras (definidas com a usuária):
  *  - 1 a 2 atividades por dia (foco), nunca fragmentar em pedaços pequenos.
@@ -241,3 +315,5 @@ export function buildTodayPlan(
   }
   return plan;
 }
+
+// ----------------------------------------------------------------------------
