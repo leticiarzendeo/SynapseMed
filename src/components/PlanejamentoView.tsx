@@ -5,33 +5,35 @@ import {
   PlanningActivityItem,
   DayCapacityConfig,
   PlanningCategory,
+  AreaItem,
+  OslerBlockRecord,
 } from '../types';
 import {
   DEFAULT_WEEK_DAYS,
   WEEK_PRESETS,
-  CANONICAL_PLANNING_ACTIVITIES,
   getAdaptiveWeeklyBudget,
   ICC_TWO_YEAR_FSRS_LADDER,
   PROVISIONAL_EVIDENCE_CASE,
   calculateDeficitImpact,
   DURATION_CALIBRATION_FACTORS,
 } from '../utils/planningEngine';
+import { buildWeeklyPlan, ContentPriority } from '../utils/priorityEngine';
+import { computePace } from '../utils/paceEngine';
 
 interface PlanejamentoViewProps {
   preferences: UserPreferences;
   onOpenAjustarMetas?: () => void;
-  /**
-   * "A ponte": avisa o App (fonte da verdade) que o conteúdo de um contentId
-   * foi concluído, para propagar ao currículo/domínio/priorização sem migrar
-   * o modelo interno PlanningActivityItem.
-   */
   onContentStudied?: (contentId?: string) => void;
+  curriculum?: AreaItem[];
+  oslerBlocks?: OslerBlockRecord[];
 }
 
 export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
   preferences,
   onOpenAjustarMetas,
   onContentStudied,
+  curriculum,
+  oslerBlocks = [],
 }) => {
   // Mode: 🤖 Recomendação do Algoritmo vs 👤 Seu Plano
   const [viewLayer, setViewLayer] = useState<'algoritmo' | 'usuario'>('usuario');
@@ -45,7 +47,58 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
   // Weekly capacity & presets
   const [currentPreset, setCurrentPreset] = useState<WeekPresetType>('normal_8h');
   const [days, setDays] = useState<DayCapacityConfig[]>(DEFAULT_WEEK_DAYS);
-  const [activities, setActivities] = useState<PlanningActivityItem[]>(CANONICAL_PLANNING_ACTIVITIES);
+
+  // Mapeia a categoria/tipo da atividade a partir da recomendação do motor.
+  const ACT_MAP: Record<string, { subType: string; category: PlanningCategory }> = {
+    avanco: { subType: 'Teoria Medway', category: 'avanco' },
+    exercicios: { subType: 'Exercícios Medway', category: 'avanco' },
+    questoes: { subType: 'Questões de provas reais', category: 'aplicacao' },
+    revisao: { subType: 'Revisão / Osler', category: 'manutencao' },
+  };
+  const DAY_KEYS = ['segunda', 'terca', 'quarta', 'quinta', 'sexta'];
+
+  const cpToPlanning = (cp: ContentPriority, dayKey: string): PlanningActivityItem => {
+    const m = ACT_MAP[cp.recommendedActivity] ?? ACT_MAP.avanco;
+    return {
+      id: `plan-${cp.contentId}-${cp.recommendedActivity}`,
+      contentId: cp.contentId,
+      name: cp.contentName,
+      subType: m.subType,
+      type: 'estudo' as any,
+      category: m.category,
+      durationMin: cp.estimatedMinutes,
+      priorityScore: cp.priorityScore,
+      efficiencyPointsPerMin: cp.priorityScore / Math.max(1, cp.estimatedMinutes),
+      specialty: cp.moduleName,
+      modulo: cp.moduleName,
+      recommendedDay: dayKey,
+      currentDay: dayKey,
+      status: 'pendente',
+      whyNow: cp.reason,
+    };
+  };
+
+  // Plano semanal REAL: distribui as prioridades nos dias úteis (seg–sex),
+  // respeitando a capacidade de cada dia. A usuária pode ajustar depois.
+  const pace = React.useMemo(() => computePace(curriculum ?? []), [curriculum]);
+  const recommendedWeek = React.useMemo(() => {
+    const weekdayCaps = DAY_KEYS.map((k) => {
+      const d = days.find((x) => x.key === k);
+      return { key: k, label: k.toUpperCase(), capacityMin: d?.capacityMin ?? 96 };
+    });
+    const plan = buildWeeklyPlan(curriculum ?? [], weekdayCaps, oslerBlocks, pace.paceFactor);
+    const acts: PlanningActivityItem[] = [];
+    for (const day of plan) {
+      for (const cp of day.activities) acts.push(cpToPlanning(cp, day.key));
+    }
+    return acts;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [curriculum, oslerBlocks, pace.paceFactor, days]);
+
+  const [activities, setActivities] = useState<PlanningActivityItem[]>(recommendedWeek);
+  React.useEffect(() => {
+    setActivities(recommendedWeek);
+  }, [recommendedWeek]);
 
   // Phase preview selector for weekly budget (Início, Meio, Final)
   const [budgetPhasePreview, setBudgetPhasePreview] = useState<'inicio' | 'meio' | 'final'>('meio');
@@ -226,7 +279,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
 
   // Recalcular Tudo
   const handleRecalculateAll = () => {
-    setActivities(CANONICAL_PLANNING_ACTIVITIES);
+    setActivities(recommendedWeek);
     showToast('✨ Algoritmo reorganizou a semana inteira: dependências respeitadas e fila ordenada por eficiência.');
   };
 
