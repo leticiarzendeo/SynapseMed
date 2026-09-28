@@ -109,7 +109,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
     }));
 
   // Ritmo/prazo (meta dez/2028): informa a pressão de prazo p/ o motor.
-  const pace = React.useMemo(() => computePace(curriculum ?? []), [curriculum]);
+  const pace = React.useMemo(() => computePace(curriculum ?? [], preferences.weeklyHoursTarget), [curriculum, preferences.weeklyHoursTarget]);
 
   // Plano de hoje gerado pelo motor real, a partir do currículo + tempo + prazo.
   const recommendedPlan = React.useMemo(
