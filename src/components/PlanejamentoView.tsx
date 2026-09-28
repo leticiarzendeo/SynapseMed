@@ -80,7 +80,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
 
   // Plano semanal REAL: distribui as prioridades nos dias úteis (seg–sex),
   // respeitando a capacidade de cada dia. A usuária pode ajustar depois.
-  const pace = React.useMemo(() => computePace(curriculum ?? []), [curriculum]);
+  const pace = React.useMemo(() => computePace(curriculum ?? [], preferences.weeklyHoursTarget), [curriculum, preferences.weeklyHoursTarget]);
   const recommendedWeek = React.useMemo(() => {
     const weekdayCaps = DAY_KEYS.map((k) => {
       const d = days.find((x) => x.key === k);

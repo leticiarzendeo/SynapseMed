@@ -494,7 +494,7 @@ export default function App() {
           )}
 
           {currentPath === 'analises' && (
-            <AnalisesView cadernoErros={cadernoErros} curriculum={studiedCurriculum} />
+            <AnalisesView cadernoErros={cadernoErros} curriculum={studiedCurriculum} preferences={preferences} />
           )}
 
           {currentPath === 'configuracoes' && (
