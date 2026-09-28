@@ -462,6 +462,7 @@ export default function App() {
               studiedContentIds={studiedContentIds}
               activities={activities}
               cadernoErros={cadernoErros}
+              oslerBlocksReal={oslerBlocks}
             />
           )}
 
