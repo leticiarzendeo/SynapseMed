@@ -5,6 +5,7 @@ import {
   initialSourceMappings,
 } from '../data/mockData';
 import { getStudiedCurriculumTotals } from '../utils/studiedProgress';
+import { contentRetention } from '../utils/retentionEngine';
 import {
   AreaItem,
   ContentItem,
@@ -13,6 +14,7 @@ import {
   QuestionAssessment,
   StudyActivity,
   CadernoErroItem,
+  OslerBlockRecord,
 } from '../types';
 import { MapeamentoFontesModal } from './MapeamentoFontesModal';
 import { MedwayTrajetoriaModal } from './MedwayTrajetoriaModal';
@@ -35,6 +37,8 @@ interface CurriculoViewProps {
   studiedContentIds?: ReadonlySet<string>;
   activities?: StudyActivity[];
   cadernoErros?: CadernoErroItem[];
+  /** Blocos Osler REAIS informados na aba Revisões (retenção de memória). */
+  oslerBlocksReal?: OslerBlockRecord[];
 }
 
 export const CurriculoView: React.FC<CurriculoViewProps> = ({
@@ -43,6 +47,7 @@ export const CurriculoView: React.FC<CurriculoViewProps> = ({
   studiedContentIds,
   activities,
   cadernoErros,
+  oslerBlocksReal = [],
 }) => {
   // Hierarquia efetiva: overlay real quando fornecido, senão o estático.
   const curriculumHierarchy: AreaItem[] = curriculum ?? fullCurriculumHierarchy;
@@ -364,44 +369,45 @@ export const CurriculoView: React.FC<CurriculoViewProps> = ({
 
   // Helper para obter métricas e blocos do Osler mapeados para um conteúdo
   const getContentOslerData = (contentId: string, contentItem?: ContentItem) => {
-    const contentMappings = mappings.filter((m) => m.contentId === contentId);
-    const mappedBlocks = oslerBlocks.filter((b) =>
-      contentMappings.some((m) => m.oslerBlockId === b.id)
-    );
+    // Fonte REAL: blocos informados na aba Revisões (oslerBlocksReal), com a
+    // mesma escala usada lá (Fácil 100 / Normal 80 / Difícil 50 / Errei 20).
+    const realBlocks = oslerBlocksReal.filter((b) => b.contentId === contentId);
 
-    const totalsAgg = mappedBlocks.reduce(
+    const totalsAgg = realBlocks.reduce(
       (acc, b) => ({
-        total: acc.total + b.cardsTotal,
-        facil: acc.facil + b.cardsFacil,
-        normal: acc.normal + b.cardsNormal,
-        dificil: acc.dificil + b.cardsDificil,
-        erros: acc.erros + b.cardsErros,
+        total: acc.total + b.totalCards,
+        facil: acc.facil + b.easy,
+        normal: acc.normal + b.normal,
+        dificil: acc.dificil + b.hard,
+        erros: acc.erros + b.wrong,
       }),
       { total: 0, facil: 0, normal: 0, dificil: 0, erros: 0 }
     );
 
     const reviewed = totalsAgg.facil + totalsAgg.normal + totalsAgg.dificil + totalsAgg.erros;
-    // Escala de Qualidade de Recuperação: Fácil=100, Normal=85, Difícil=70 (não é erro), Errado=0
+    // Retenção agregada do conteúdo (mesma regra do retentionEngine, que penaliza
+    // blocos fracos para não deixar um bloco forte esconder vários frágeis).
+    const retFromEngine = realBlocks.length ? contentRetention(realBlocks) : null;
     const weightedPoints =
-      totalsAgg.facil * 100 + totalsAgg.normal * 85 + totalsAgg.dificil * 70 + totalsAgg.erros * 0;
-    const qualityAccuracy = reviewed > 0 ? Number((weightedPoints / reviewed).toFixed(1)) : 85;
+      totalsAgg.facil * 100 + totalsAgg.normal * 80 + totalsAgg.dificil * 50 + totalsAgg.erros * 20;
+    const simpleRet = reviewed > 0 ? Number((weightedPoints / reviewed).toFixed(1)) : null;
+    const retentionScore = retFromEngine ?? simpleRet ?? contentItem?.oslerEvidence?.retentionScore ?? null;
 
-    const retentionScore = contentItem?.oslerEvidence?.retentionScore ?? qualityAccuracy;
-    const stabilityLevel =
-      contentItem?.oslerEvidence?.stabilityLevel ??
-      (totalsAgg.erros > 6 ? 'moderada' : 'alta');
+    // Confiança pela quantidade de evidência real (nº de cartões revisados).
     const confidenceLevel =
-      contentItem?.oslerEvidence?.confidenceLevel ??
-      (reviewed >= 60 ? 'alta' : reviewed >= 25 ? 'moderada' : 'inicial');
+      reviewed >= 60 ? 'alta' : reviewed >= 25 ? 'moderada' : reviewed > 0 ? 'inicial' : 'sem_dados';
+    // Estabilidade aproximada pela taxa de erro real.
+    const stabilityLevel =
+      reviewed === 0 ? 'sem_dados' : totalsAgg.erros / Math.max(1, reviewed) > 0.2 ? 'moderada' : 'alta';
 
     return {
-      blocks: mappedBlocks,
+      blocks: realBlocks,
       metrics: totalsAgg,
       reviewed,
       retentionScore,
       stabilityLevel,
       confidenceLevel,
-      hasMappings: mappedBlocks.length > 0,
+      hasMappings: realBlocks.length > 0,
     };
   };
 
@@ -464,48 +470,8 @@ export const CurriculoView: React.FC<CurriculoViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Sub-tabs selector */}
-          <div className="p-1 bg-surface-container-low rounded-xl border border-surface-container flex items-center gap-1">
-            <button
-              onClick={() => setActiveTab('arvore')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                activeTab === 'arvore'
-                  ? 'bg-primary text-on-primary shadow-xs'
-                  : 'text-secondary hover:text-on-surface hover:bg-surface-container'
-              }`}
-            >
-              <span className="material-symbols-outlined text-sm">view_agenda</span>
-              Árvore &amp; Dossiês
-            </button>
-            <button
-              onClick={() => setActiveTab('mapeamento')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                activeTab === 'mapeamento'
-                  ? 'bg-primary text-on-primary shadow-xs'
-                  : 'text-secondary hover:text-on-surface hover:bg-surface-container'
-              }`}
-            >
-              <span className="material-symbols-outlined text-sm">alt_route</span>
-              Mapeamento Medway ↔ Osler
-              <span className="px-1.5 py-0.2 rounded-full text-[0.625rem] bg-amber-200 text-amber-900 font-bold font-code-metric">
-                N:M
-              </span>
-            </button>
-            <button
-              onClick={() => setActiveTab('banco-relacional')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                activeTab === 'banco-relacional'
-                  ? 'bg-primary text-on-primary shadow-xs'
-                  : 'text-secondary hover:text-on-surface hover:bg-surface-container'
-              }`}
-            >
-              <span className="material-symbols-outlined text-sm">database</span>
-              Banco Relacional
-              <span className="px-1.5 py-0.2 rounded-full text-[0.625rem] bg-indigo-200 text-indigo-900 font-bold font-code-metric">
-                30 Regras
-              </span>
-            </button>
-          </div>
+          {/* Sub-abas Mapeamento e Banco Relacional removidas: dados de
+              exemplo redundantes com o currículo real. Resta a Árvore. */}
         </div>
       </div>
 
@@ -928,15 +894,6 @@ export const CurriculoView: React.FC<CurriculoViewProps> = ({
                                       Evidências independentes reunidas sob a mesma entidade central de currículo.
                                     </p>
                                   </div>
-
-                                  {/* Botão de mapeamento rápido N:M */}
-                                  <button
-                                    onClick={() => setMappingModalContent(content)}
-                                    className="px-3 py-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs font-bold flex items-center gap-1 transition-all"
-                                  >
-                                    <span className="material-symbols-outlined text-sm">alt_route</span>
-                                    Gerenciar Mapeamento Osler ({oslerData.blocks.length})
-                                  </button>
                                 </div>
 
                                 {/* Grade de 5 Caixas de Evidências */}
@@ -1040,12 +997,6 @@ export const CurriculoView: React.FC<CurriculoViewProps> = ({
                                           <span className="material-symbols-outlined text-xs">analytics</span>
                                           Dossiê
                                         </button>
-                                        <button
-                                          onClick={() => setMappingModalContent(content)}
-                                          className="text-[0.6875rem] text-secondary hover:underline font-medium"
-                                        >
-                                          Editar N:M
-                                        </button>
                                       </div>
                                     </div>
 
@@ -1071,19 +1022,23 @@ export const CurriculoView: React.FC<CurriculoViewProps> = ({
 
                                     {/* Síntese do Osler: Retenção Atual + Estabilidade + Confiança */}
                                     <div className="space-y-1 text-xs text-secondary pt-0.5 border-t border-surface-container/60">
+                                      {oslerData.reviewed === 0 ? (
+                                        <div className="text-[0.6875rem] text-secondary italic py-1">
+                                          Sem revisões informadas ainda. Registre este conteúdo na aba
+                                          Revisões (Informar bloco Osler) para ver a retenção real.
+                                        </div>
+                                      ) : (
+                                      <>
                                       <div className="flex items-center justify-between">
                                         <span className="text-[0.6875rem]">🧠 Retenção Atual:</span>
                                         <strong className="font-code-metric text-indigo-700 font-bold">
-                                          {oslerData.retentionScore.toFixed(1)}%
+                                          {oslerData.retentionScore != null ? `${oslerData.retentionScore.toFixed(1)}%` : '—'}
                                         </strong>
                                       </div>
                                       <div className="flex items-center justify-between">
                                         <span className="text-[0.6875rem]">🔒 Estabilidade da Memória:</span>
                                         <span className="font-semibold capitalize text-on-surface text-[0.6875rem] flex items-center gap-1">
                                           {oslerData.stabilityLevel}
-                                          <span className="text-[0.5625rem] text-secondary font-code-metric">
-                                            (S = {content.fsrs.stabilityDays}d)
-                                          </span>
                                         </span>
                                       </div>
                                       <div className="flex items-center justify-between">
@@ -1092,6 +1047,8 @@ export const CurriculoView: React.FC<CurriculoViewProps> = ({
                                           {oslerData.confidenceLevel} ({oslerData.reviewed}/{oslerData.metrics.total} cartões)
                                         </span>
                                       </div>
+                                      </>
+                                      )}
                                     </div>
 
                                     {/* Lista dos títulos/blocos mapeados */}
@@ -1300,7 +1257,7 @@ export const CurriculoView: React.FC<CurriculoViewProps> = ({
                                     100;
                                   const isMasking =
                                     content.oslerEvidence?.diagnosticAlignment?.isMaskingDeficiency ||
-                                    (oslerData.retentionScore >= 75 && realExamAcc < 75);
+                                    (oslerData.retentionScore != null && oslerData.retentionScore >= 75 && realExamAcc < 75);
 
                                   if (!isMasking) return null;
 
@@ -1325,7 +1282,7 @@ export const CurriculoView: React.FC<CurriculoViewProps> = ({
                                             <span>Memória &amp; Pós-Vídeo Fortes</span>
                                           </div>
                                           <p className="text-[0.625rem] text-secondary">
-                                            Retenção Osler: <strong className="text-indigo-900 font-code-metric">{oslerData.retentionScore.toFixed(1)}%</strong> • Pós-vídeo: <strong className="text-emerald-900 font-code-metric">{postAcc}%</strong>. Você lembra dos conceitos e consolidou a teoria.
+                                            Retenção Osler: <strong className="text-indigo-900 font-code-metric">{oslerData.retentionScore != null ? oslerData.retentionScore.toFixed(1) + "%" : "—"}</strong> • Pós-vídeo: <strong className="text-emerald-900 font-code-metric">{postAcc}%</strong>. Você lembra dos conceitos e consolidou a teoria.
                                           </p>
                                         </div>
 
@@ -1384,233 +1341,7 @@ export const CurriculoView: React.FC<CurriculoViewProps> = ({
       )}
 
       {/* TAB 2: MAPEAMENTO DE FONTES (MEDWAY ↔ OSLER N:M) */}
-      {activeTab === 'mapeamento' && (
-        <div className="space-y-6 animate-fadeIn">
-          {/* Conceptual Architecture Card */}
-          <div className="p-5 rounded-2xl bg-surface-container-lowest border border-surface-container shadow-sm space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-xl bg-primary-container text-on-primary-container">
-                <span className="material-symbols-outlined text-xl">alt_route</span>
-              </div>
-              <div className="space-y-1">
-                <h2 className="text-base font-bold text-on-surface">
-                  Regra Estrutural nº 1 — Mapeamento Entre Fontes (Relação Muitos-para-Muitos)
-                </h2>
-                <p className="text-xs text-secondary leading-relaxed max-w-3xl">
-                  Não assumimos que 1 conteúdo Medway = 1 bloco Osler. O aplicativo possui um <strong>currículo central</strong>{' '}
-                  definido pela Medway, enquanto o Osler possui sua própria estrutura de títulos/blocos. Você faz a associação manual{' '}
-                  permanente e um bloco do Osler pode até pertencer a mais de um conteúdo Medway (N:M).
-                </p>
-              </div>
-            </div>
-
-            {/* The 2 Relationship Types */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-              <div className="p-3.5 rounded-xl bg-surface-container-low border border-surface-container space-y-1.5">
-                <div className="text-xs font-bold text-primary flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-sm">touch_app</span>
-                  1. Mapeamento Manual (Medway ↔ Osler)
-                </div>
-                <p className="text-xs text-secondary leading-relaxed">
-                  Realizado no momento do cadastro do currículo. Você seleciona os blocos/títulos do Osler que alimentam a evidência de domínio daquele tópico (ex: 4 blocos de IC associados a ICC). Essa relação fica permanentemente salva.
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-surface-container-low border border-surface-container space-y-1.5">
-                <div className="text-xs font-bold text-purple-700 flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-sm">psychology</span>
-                  2. Classificação Automática de Questões (IA)
-                </div>
-                <p className="text-xs text-secondary leading-relaxed">
-                  Quando você importa uma prova ou simulado, a IA lê o enunciado e busca automaticamente o conteúdo central correspondente dentro do currículo Medway (ex: Questão 23 → Cardiologia → ICC).
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3.5 rounded-xl bg-surface-container-lowest border border-surface-container">
-              <span className="text-[0.625rem] text-secondary font-semibold uppercase block">Conteúdos Medway</span>
-              <span className="font-code-metric text-lg font-bold text-on-surface">{allContents.length}</span>
-            </div>
-            <div className="p-3.5 rounded-xl bg-surface-container-lowest border border-surface-container">
-              <span className="text-[0.625rem] text-secondary font-semibold uppercase block">Títulos no Catálogo Osler</span>
-              <span className="font-code-metric text-lg font-bold text-indigo-700">{oslerBlocks.length}</span>
-            </div>
-            <div className="p-3.5 rounded-xl bg-surface-container-lowest border border-surface-container">
-              <span className="text-[0.625rem] text-secondary font-semibold uppercase block">Associações N:M Ativas</span>
-              <span className="font-code-metric text-lg font-bold text-primary">{mappings.length}</span>
-            </div>
-            <div className="p-3.5 rounded-xl bg-surface-container-lowest border border-surface-container">
-              <span className="text-[0.625rem] text-secondary font-semibold uppercase block">Total Cards Integrados</span>
-              <span className="font-code-metric text-lg font-bold text-emerald-700">
-                {mappings.reduce((sum, m) => {
-                  const b = oslerBlocks.find((blk) => blk.id === m.oslerBlockId);
-                  return sum + (b ? b.cardsTotal : 0);
-                }, 0)}
-              </span>
-            </div>
-          </div>
-
-          {/* Mapeamentos Table / List */}
-          <div className="p-5 rounded-2xl bg-surface-container-lowest border border-surface-container shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-bold text-on-surface">
-                  Tabela Geral de Mapeamentos (Medway ↔ Osler)
-                </h3>
-                <p className="text-xs text-secondary">
-                  Clique em &ldquo;Gerenciar&rdquo; para adicionar ou remover blocos do Osler a qualquer conteúdo central.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setMappingModalContent(allContents[0])}
-                  className="px-3 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-semibold hover:bg-primary-container flex items-center gap-1 shadow-xs"
-                >
-                  <span className="material-symbols-outlined text-sm">add_link</span>
-                  Nova Associação
-                </button>
-              </div>
-            </div>
-
-            <div className="divide-y divide-surface-container rounded-xl border border-surface-container overflow-hidden bg-surface-container-lowest">
-              {allContents.map((content) => {
-                const oslerData = getContentOslerData(content.id);
-
-                return (
-                  <div key={content.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-surface-container-low/30 transition-colors">
-                    <div className="space-y-1 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-on-surface">{content.name}</span>
-                        <span className="text-[0.625rem] text-secondary px-1.5 py-0.2 rounded bg-surface-container">
-                          {content.moduloName}
-                        </span>
-                      </div>
-
-                      {/* Chips dos blocos mapeados */}
-                      <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                        {oslerData.blocks.map((b) => (
-                          <span
-                            key={b.id}
-                            className="text-[0.6875rem] px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-200/60 text-indigo-800 font-medium flex items-center gap-1"
-                          >
-                            <span className="material-symbols-outlined text-[0.75rem]">style</span>
-                            <span>{b.title}</span>
-                            <span className="font-code-metric text-[0.625rem] text-indigo-600">({b.cardsTotal}c)</span>
-                          </span>
-                        ))}
-                        {oslerData.blocks.length === 0 && (
-                          <span className="text-[0.6875rem] text-secondary italic">
-                            Nenhum bloco Osler mapeado ainda.
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 shrink-0 self-end md:self-auto">
-                      <div className="text-right">
-                        <span className="text-[0.625rem] text-secondary block">Cards Vinculados</span>
-                        <span className="font-code-metric font-bold text-xs text-primary">
-                          {oslerData.metrics.total} cards
-                        </span>
-                      </div>
-
-                      <button
-                        onClick={() => setMappingModalContent(content)}
-                        className="px-3 py-1.5 rounded-lg bg-surface-container-low border border-surface-container text-xs font-semibold hover:bg-surface-container text-on-surface flex items-center gap-1 transition-all"
-                      >
-                        <span className="material-symbols-outlined text-sm">edit</span>
-                        Mapear ({oslerData.blocks.length})
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Catálogo de Títulos no Osler */}
-          <div className="p-5 rounded-2xl bg-surface-container-lowest border border-surface-container shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-bold text-on-surface">
-                  Catálogo de Títulos/Blocos Cadastrados no Osler ({oslerBlocks.length})
-                </h3>
-                <p className="text-xs text-secondary">
-                  Estrutura independente de flashcards da plataforma Osler.
-                </p>
-              </div>
-
-              <button
-                onClick={() => setMappingModalContent(allContents[0])}
-                className="px-3 py-1.5 rounded-lg bg-surface-container-low border border-surface-container text-xs font-semibold hover:bg-surface-container text-on-surface flex items-center gap-1"
-              >
-                <span className="material-symbols-outlined text-sm">add</span>
-                Cadastrar Título no Osler
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {oslerBlocks.map((block) => {
-                // Conteúdos Medway aos quais este bloco está associado
-                const associatedContents = mappings
-                  .filter((m) => m.oslerBlockId === block.id)
-                  .map((m) => allContents.find((c) => c.id === m.contentId)?.name || m.contentId);
-
-                return (
-                  <div key={block.id} className="p-3.5 rounded-xl bg-surface-container-low/60 border border-surface-container space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-xs font-bold text-on-surface leading-snug">
-                        {block.title}
-                      </span>
-                      <span className="font-code-metric text-[0.625rem] font-bold px-1.5 py-0.5 rounded bg-surface-container text-secondary shrink-0">
-                        {block.cardsTotal} cards
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-[0.6875rem] text-secondary">
-                      <span>Fácil: {block.cardsFacil}</span>
-                      <span>•</span>
-                      <span>Normal: {block.cardsNormal}</span>
-                      <span>•</span>
-                      <span>Erros: {block.cardsErros}</span>
-                    </div>
-
-                    {/* Mostra se está associado a 1 ou mais conteúdos Medway */}
-                    <div className="pt-1 border-t border-surface-container text-[0.6875rem]">
-                      <span className="text-secondary block text-[0.625rem]">Associado aos Conteúdos Medway:</span>
-                      {associatedContents.length > 0 ? (
-                        <div className="space-y-0.5 mt-0.5">
-                          {associatedContents.map((name, idx) => (
-                            <span
-                              key={idx}
-                              className="inline-block text-[0.625rem] bg-emerald-50 text-emerald-800 border border-emerald-200/60 px-1.5 py-0.2 rounded mr-1"
-                            >
-                              ✓ {name}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-secondary italic text-[0.625rem]">Sem vínculo ativo</span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 3: ARQUITETURA DO BANCO DE DADOS RELACIONAL (30 PRINCÍPIOS) */}
-      {activeTab === 'banco-relacional' && (
-        <div className="animate-fadeIn">
-          <BancoRelacionalView />
-        </div>
-      )}
+      {/* Sub-abas Mapeamento e Banco Relacional removidas (dados de exemplo). */}
 
       {/* Modal de Mapeamento de Fontes N:M */}
       {mappingModalContent && (
