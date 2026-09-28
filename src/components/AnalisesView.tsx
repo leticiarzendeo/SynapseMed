@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { errorReasonConfig, fullCurriculumHierarchy } from '../data/mockData';
 import { getStudiedCurriculumTotals } from '../utils/studiedProgress';
+import { computePace } from '../utils/paceEngine';
 import { AreaItem, ErrorReasonType, CadernoErroItem } from '../types';
 
 interface AnalisesViewProps {
@@ -17,14 +18,10 @@ export const AnalisesView: React.FC<AnalisesViewProps> = ({ cadernoErros = [], c
   // Totais por domínio real (coerente com Currículo/Desempenho/Prioridades).
   const totals = getStudiedCurriculumTotals(hierarchy);
 
-  // Horas restantes REAIS: soma das videoaulas dos conteúdos ainda não
-  // consolidados (proxy do que falta estudar), + tempo de questões/revisão.
-  const allContents = hierarchy.flatMap((a) => a.modules.flatMap((m) => m.contents));
-  const remainingContents = allContents.filter((c) => !c.isConsolidated);
-  const theoryHours = remainingContents.reduce((s, c) => s + (c.videoLessonsHours || 0), 0);
-  // estimativa: para cada conteúdo restante, ~1h de questões + ~0.5h de revisão
-  const practiceHours = remainingContents.length * 1.5;
-  const totalCurriculumHours = Math.round(theoryHours + practiceHours);
+  // FONTE ÚNICA de prazo/ritmo (mesma das abas Hoje e Planejamento).
+  const pace = computePace(hierarchy);
+  const totalCurriculumHours = pace.totalCurriculumHours;
+  // Cronograma conforme as horas/semana que a usuária simula no seletor:
   const weeksNeeded = selectedWeeklyHours > 0 ? Math.ceil(totalCurriculumHours / selectedWeeklyHours) : 0;
   const monthsNeeded = (weeksNeeded / 4.33).toFixed(1);
   const isWithinTwoYears = weeksNeeded <= 104; // 104 semanas = 2 anos
