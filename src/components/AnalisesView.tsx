@@ -1,32 +1,40 @@
 import React, { useState } from 'react';
-import { errorReasonConfig, initialCadernoErros, fullCurriculumHierarchy } from '../data/mockData';
+import { errorReasonConfig, fullCurriculumHierarchy } from '../data/mockData';
 import { getStudiedCurriculumTotals } from '../utils/studiedProgress';
-import { AreaItem, ErrorReasonType } from '../types';
+import { AreaItem, ErrorReasonType, CadernoErroItem } from '../types';
 
 interface AnalisesViewProps {
-  cadernoErros?: unknown;
+  cadernoErros?: CadernoErroItem[];
   curriculum?: AreaItem[];
 }
 
-export const AnalisesView: React.FC<AnalisesViewProps> = ({ curriculum }) => {
+export const AnalisesView: React.FC<AnalisesViewProps> = ({ cadernoErros = [], curriculum }) => {
   const [selectedWeeklyHours, setSelectedWeeklyHours] = useState<number>(8);
   const [selectedErrorFilter, setSelectedErrorFilter] = useState<string>('todos');
 
+  const hierarchy = curriculum ?? fullCurriculumHierarchy;
+
   // Totais por domínio real (coerente com Currículo/Desempenho/Prioridades).
-  const totals = getStudiedCurriculumTotals(curriculum ?? fullCurriculumHierarchy);
+  const totals = getStudiedCurriculumTotals(hierarchy);
 
-  // Calculate dynamic 2-year timeline based on weekly hours
-  // Total curriculum hours = 780h theory + 350h questions + 180h revisions = ~1310h
-  const totalCurriculumHours = 830; // remaining hours needed
-  const weeksNeeded = Math.ceil(totalCurriculumHours / selectedWeeklyHours);
+  // Horas restantes REAIS: soma das videoaulas dos conteúdos ainda não
+  // consolidados (proxy do que falta estudar), + tempo de questões/revisão.
+  const allContents = hierarchy.flatMap((a) => a.modules.flatMap((m) => m.contents));
+  const remainingContents = allContents.filter((c) => !c.isConsolidated);
+  const theoryHours = remainingContents.reduce((s, c) => s + (c.videoLessonsHours || 0), 0);
+  // estimativa: para cada conteúdo restante, ~1h de questões + ~0.5h de revisão
+  const practiceHours = remainingContents.length * 1.5;
+  const totalCurriculumHours = Math.round(theoryHours + practiceHours);
+  const weeksNeeded = selectedWeeklyHours > 0 ? Math.ceil(totalCurriculumHours / selectedWeeklyHours) : 0;
   const monthsNeeded = (weeksNeeded / 4.33).toFixed(1);
-  const isWithinTwoYears = weeksNeeded <= 104; // 104 weeks = 2 years
+  const isWithinTwoYears = weeksNeeded <= 104; // 104 semanas = 2 anos
 
-  // Calculate error stats by category
+  // Estatísticas de erro por categoria — do caderno REAL.
+  const totalErros = cadernoErros.length;
   const errorStats = Object.keys(errorReasonConfig).map((key) => {
     const reasonKey = key as ErrorReasonType;
-    const count = initialCadernoErros.filter((e) => e.reasonCategory === reasonKey).length;
-    const percentage = Math.round((count / initialCadernoErros.length) * 100);
+    const count = cadernoErros.filter((e) => e.reasonCategory === reasonKey).length;
+    const percentage = totalErros > 0 ? Math.round((count / totalErros) * 100) : 0;
     return {
       key: reasonKey,
       ...errorReasonConfig[reasonKey],
@@ -37,8 +45,8 @@ export const AnalisesView: React.FC<AnalisesViewProps> = ({ curriculum }) => {
 
   const filteredErrors =
     selectedErrorFilter === 'todos'
-      ? initialCadernoErros
-      : initialCadernoErros.filter((e) => e.reasonCategory === selectedErrorFilter);
+      ? cadernoErros
+      : cadernoErros.filter((e) => e.reasonCategory === selectedErrorFilter);
 
   return (
     <div className="flex flex-col w-full px-4 sm:px-space-gutter-desktop py-space-xl max-w-max-width-content mx-auto space-y-space-xl">
@@ -83,7 +91,7 @@ export const AnalisesView: React.FC<AnalisesViewProps> = ({ curriculum }) => {
             </div>
             <h3 className="text-xs font-bold text-on-surface">Currículo Oficial</h3>
             <p className="text-[0.6875rem] text-secondary leading-relaxed">
-              Área → Módulo → Conteúdo. 650 conteúdos mapeados cobrindo 100% dos editais dos últimos 5 anos.
+              Módulo → Conteúdo → Tópicos Osler. {totals.total} conteúdos no currículo, com tópicos de flashcards correlacionados.
             </p>
             <div className="font-code-metric text-[0.625rem] text-primary font-bold">
               {totals.studied}/{totals.total} estudados
@@ -159,7 +167,7 @@ export const AnalisesView: React.FC<AnalisesViewProps> = ({ curriculum }) => {
               onChange={(e) => setSelectedErrorFilter(e.target.value)}
               className="h-8 px-2.5 bg-surface-container-low rounded-lg border border-surface-container text-xs text-on-surface font-semibold focus:outline-none"
             >
-              <option value="todos">Todos ({initialCadernoErros.length})</option>
+              <option value="todos">Todos ({totalErros})</option>
               {Object.entries(errorReasonConfig).map(([key, cfg]) => (
                 <option key={key} value={key}>
                   {cfg.label}
@@ -215,6 +223,12 @@ export const AnalisesView: React.FC<AnalisesViewProps> = ({ curriculum }) => {
           </div>
 
           <div className="space-y-2">
+            {filteredErrors.length === 0 && (
+              <div className="p-6 text-center rounded-xl border border-dashed border-surface-container text-secondary text-xs">
+                Nenhum erro catalogado ainda. Conforme você registra provas e marca
+                os erros (com o motivo), eles aparecem aqui para análise.
+              </div>
+            )}
             {filteredErrors.map((err) => {
               const reasonInfo = errorReasonConfig[err.reasonCategory] || errorReasonConfig.outro;
               return (
