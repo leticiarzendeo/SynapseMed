@@ -109,129 +109,7 @@ const GRANDES_AREAS = [
 ] as const;
 
 // Gerador de provas iniciais para preencher o armazenamento inicial
-function getInitialDownloadedExams(): DownloadedExam[] {
-  const letters = ['A', 'B', 'C', 'D', 'E'];
-  const errorReasonTypes: ErrorReasonType[] = [
-    'nao_sabia',
-    'desatencao',
-    'entre_duas',
-    'interpretacao',
-    'esqueci',
-    'raciocinio',
-    'outro',
-  ];
-
-  // 1. ENARE 2024 (100 questões, 79 acertos, 21 erros)
-  const enareQ = generate100QuestionsExam('ENARE 2024', 'ENARE / FGV', 2024, 'PROVA_REAL');
-  const enareOfficial: { [q: number]: string } = {};
-  const enareStudent: { [q: number]: string } = {};
-  const enareReasons: { [q: number]: ErrorReasonType } = {};
-
-  enareQ.forEach((q, idx) => {
-    const off = letters[(q.questionNumber * 3 + 7) % 5];
-    enareOfficial[q.questionNumber] = off;
-    const isHit = (q.questionNumber * 7) % 100 < 79;
-    if (isHit) {
-      enareStudent[q.questionNumber] = off;
-    } else {
-      const wrong = letters.filter((l) => l !== off);
-      enareStudent[q.questionNumber] = wrong[idx % wrong.length];
-      enareReasons[q.questionNumber] = errorReasonTypes[idx % errorReasonTypes.length];
-    }
-  });
-
-  const enareExam: DownloadedExam = {
-    id: 'exam-enare-2024',
-    title: 'ENARE 2024 - Exame Nacional de Residência (100 Questões)',
-    institution: 'ENARE / FGV',
-    year: 2024,
-    type: 'PROVA_REAL',
-    totalQuestions: 100,
-    officialAnswers: enareOfficial,
-    studentAnswers: enareStudent,
-    isCorrected: true,
-    questionErrorReasons: enareReasons,
-    questions: enareQ.map((q) => {
-      const isCorrect = enareStudent[q.questionNumber] === enareOfficial[q.questionNumber];
-      return {
-        ...q,
-        isCorrect,
-        errorReason: isCorrect ? undefined : enareReasons[q.questionNumber],
-      };
-    }),
-    downloadedAt: '2024-11-15',
-  };
-
-  // 2. Simulado Nacional Medway 2025 #1 (100 questões, 82 acertos, 18 erros)
-  const medwayQ = generate100QuestionsExam(
-    'Simulado Nacional Medway 2025 #1',
-    'Medway Simulados',
-    2025,
-    'SIMULADO'
-  );
-  const medwayOfficial: { [q: number]: string } = {};
-  const medwayStudent: { [q: number]: string } = {};
-  const medwayReasons: { [q: number]: ErrorReasonType } = {};
-
-  medwayQ.forEach((q, idx) => {
-    const off = letters[(q.questionNumber * 2 + 3) % 5];
-    medwayOfficial[q.questionNumber] = off;
-    const isHit = (q.questionNumber * 13) % 100 < 82;
-    if (isHit) {
-      medwayStudent[q.questionNumber] = off;
-    } else {
-      const wrong = letters.filter((l) => l !== off);
-      medwayStudent[q.questionNumber] = wrong[idx % wrong.length];
-      medwayReasons[q.questionNumber] = errorReasonTypes[(idx + 2) % errorReasonTypes.length];
-    }
-  });
-
-  const medwayExam: DownloadedExam = {
-    id: 'exam-simulado-medway-2025',
-    title: 'Simulado Nacional Medway 2025 #1 (100 Questões)',
-    institution: 'Medway Simulados',
-    year: 2025,
-    type: 'SIMULADO',
-    totalQuestions: 100,
-    officialAnswers: medwayOfficial,
-    studentAnswers: medwayStudent,
-    isCorrected: true,
-    questionErrorReasons: medwayReasons,
-    questions: medwayQ.map((q) => {
-      const isCorrect = medwayStudent[q.questionNumber] === medwayOfficial[q.questionNumber];
-      return {
-        ...q,
-        isCorrect,
-        errorReason: isCorrect ? undefined : medwayReasons[q.questionNumber],
-      };
-    }),
-    downloadedAt: '2025-02-10',
-  };
-
-  // 3. USP-SP 2025 (Pendente de preenchimento, 0 acertos, 0 erros)
-  const uspQ = generate100QuestionsExam('USP-SP 2025', 'USP-SP / FUVEST', 2025, 'PROVA_REAL');
-  const uspOfficial: { [q: number]: string } = {};
-  uspQ.forEach((q) => {
-    uspOfficial[q.questionNumber] = letters[(q.questionNumber * 4 + 1) % 5];
-  });
-
-  const uspExam: DownloadedExam = {
-    id: 'exam-usp-2025',
-    title: 'USP-SP 2025 - Prova de Acesso Direto (100 Questões)',
-    institution: 'USP-SP / FUVEST',
-    year: 2025,
-    type: 'PROVA_REAL',
-    totalQuestions: 100,
-    officialAnswers: uspOfficial,
-    studentAnswers: {},
-    isCorrected: false,
-    questionErrorReasons: {},
-    questions: uspQ,
-    downloadedAt: '2025-01-20',
-  };
-
-  return [enareExam, medwayExam, uspExam];
-}
+// getInitialDownloadedExams removida: não semeamos mais provas de exemplo.
 
 interface ProvasSimuladosViewProps {
   onAddEvidence?: (record: EvidenceRecord) => void;
@@ -258,9 +136,9 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
     } catch (e) {
       console.error('Falha ao carregar simulados salvos:', e);
     }
-    const initial = getInitialDownloadedExams();
-    localStorage.setItem('synapsemed_downloaded_exams', JSON.stringify(initial));
-    return initial;
+    // Começa VAZIO: nada de provas de exemplo. A lista se preenche quando a
+    // usuária importa (PDF/IA) ou registra manualmente.
+    return [];
   });
 
   // Salvar no localStorage sempre que downloadedExams mudar
@@ -961,23 +839,9 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
       <div className="flex items-center justify-end">
         {/* FERRAMENTAS DE ADICIONAR SIMULADOS / PROVAS BAIXADAS */}
         <div className="flex items-center gap-2.5 flex-wrap">
-          <button
-            onClick={() => handleOpenFileDialog('PROVA_REAL')}
-            className="px-3.5 py-2 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-98"
-            title="Abre a janela do seu computador para anexar uma prova oficial na íntegra"
-          >
-            <span className="material-symbols-outlined text-base">description</span>
-            <span>Submeter Nova Prova</span>
-          </button>
-
-          <button
-            onClick={() => handleOpenFileDialog('SIMULADO')}
-            className="px-3.5 py-2 rounded-xl bg-purple-700 text-white text-xs font-bold hover:bg-purple-800 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-98"
-            title="Abre a janela do seu computador para anexar um simulado completo"
-          >
-            <span className="material-symbols-outlined text-base">quiz</span>
-            <span>Submeter Novo Simulado</span>
-          </button>
+          {/* Botões "Submeter Prova/Simulado" (upload de PDF) removidos: geravam
+              questões de exemplo, não liam o PDF. Os fluxos reais são "Importar
+              resultado da IA" (JSON) e o registro manual. */}
 
           <button
             onClick={() => setShowAddManualModal(true)}
@@ -1214,20 +1078,8 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
             </span>
           </button>
 
-          <button
-            onClick={() => setViewMode('instituicoes_alvo')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-              viewMode === 'instituicoes_alvo'
-                ? 'bg-primary text-on-primary shadow-xs'
-                : 'bg-surface-container-low text-secondary hover:text-on-surface'
-            }`}
-          >
-            <span className="material-symbols-outlined text-sm">verified</span>
-            <span>Instituições-Alvo (5 Anos &amp; Incidência)</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-900 text-[0.625rem] font-bold">
-              5 Bancas
-            </span>
-          </button>
+          {/* Aba "Instituições-Alvo" removida: redundante com a aba Incidência
+              (as prioridades/incidência da Medway já vivem lá). */}
 
           {viewMode === 'questoes' && activeExam && (
             <button
@@ -1296,34 +1148,31 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
                 Nenhum simulado ou prova na lista
               </h3>
               <p className="text-xs text-secondary max-w-md mx-auto">
-                Utilize os botões acima para submeter arquivos de provas oficiais, simulados em PDF ou adicionar manualmente.
+                Importe o resultado classificado por IA (JSON) ou registre uma prova
+                manualmente para começar a acompanhar seu desempenho.
               </p>
               <div className="flex items-center justify-center gap-3 pt-2">
                 <button
-                  onClick={() => handleOpenFileDialog('PROVA_REAL')}
-                  className="px-4 py-2 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90"
+                  onClick={() => setShowImportIA(true)}
+                  className="px-4 py-2 rounded-xl bg-indigo-700 text-white text-xs font-bold hover:bg-indigo-800"
                 >
-                  Submeter Prova
+                  🤖 Importar resultado da IA
                 </button>
                 <button
-                  onClick={() => handleOpenFileDialog('SIMULADO')}
-                  className="px-4 py-2 rounded-xl bg-purple-700 text-white text-xs font-bold hover:bg-purple-800"
+                  onClick={() => setShowManualRegistro(true)}
+                  className="px-4 py-2 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary/90"
                 >
-                  Submeter Simulado
+                  + Registrar prova (manual)
                 </button>
               </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4">
               {downloadedExams.map((exam) => {
-                const total = exam.totalQuestions || 100;
+                const total = exam.totalQuestions || exam.questions.length;
                 const answered = Object.keys(exam.studentAnswers).length;
                 const hits = exam.isCorrected
-                  ? exam.questions.filter(
-                      (q) =>
-                        exam.studentAnswers[q.questionNumber] ===
-                        (exam.officialAnswers[q.questionNumber] || 'A')
-                    ).length
+                  ? exam.questions.filter((q) => q.isCorrect).length
                   : 0;
                 const misses = exam.isCorrected ? total - hits : 0;
                 const pct = total > 0 ? Math.round((hits / total) * 100) : 0;
@@ -1879,11 +1728,7 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
       {/* ========================================================================= */}
       {/* ABA INSTITUIÇÕES-ALVO (ÚLTIMOS 5 ANOS & INCIDÊNCIA CURRICULAR) */}
       {/* ========================================================================= */}
-      {viewMode === 'instituicoes_alvo' && (
-        <TargetInstitutionsAnalysisPanel
-          onOpenCaderno={(examId) => handleOpenQuestions(examId)}
-        />
-      )}
+      {/* Aba Instituições-Alvo removida (redundante com Incidência). */}
 
       {/* ========================================================================= */}
       {/* ABA EVIDÊNCIA PEDAGÓGICA (DOSSIÊS DAS 4 DIMENSÕES E ANÁLISE) */}
