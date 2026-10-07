@@ -25,6 +25,9 @@ interface PlanejamentoViewProps {
   onContentStudied?: (contentId?: string) => void;
   curriculum?: AreaItem[];
   oslerBlocks?: OslerBlockRecord[];
+  /** Disponibilidade da semana (fonte central no App, persistida). */
+  weekDays?: DayCapacityConfig[];
+  onChangeWeekDays?: (days: DayCapacityConfig[]) => void;
 }
 
 export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
@@ -33,6 +36,8 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
   onContentStudied,
   curriculum,
   oslerBlocks = [],
+  weekDays,
+  onChangeWeekDays,
 }) => {
   // Mode: 🤖 Recomendação do Algoritmo vs 👤 Seu Plano
   const [viewLayer, setViewLayer] = useState<'algoritmo' | 'usuario'>('usuario');
@@ -46,7 +51,13 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
 
   // Weekly capacity & presets
   const [currentPreset, setCurrentPreset] = useState<WeekPresetType>('normal_8h');
-  const [days, setDays] = useState<DayCapacityConfig[]>(DEFAULT_WEEK_DAYS);
+  // Disponibilidade da semana: FONTE CENTRAL vem do App (persistida). Se por
+  // algum motivo não vier, cai no padrão local. O setter avisa o App.
+  const days: DayCapacityConfig[] = weekDays && weekDays.length ? weekDays : DEFAULT_WEEK_DAYS;
+  const setDays = (updater: DayCapacityConfig[] | ((prev: DayCapacityConfig[]) => DayCapacityConfig[])) => {
+    const next = typeof updater === 'function' ? (updater as (p: DayCapacityConfig[]) => DayCapacityConfig[])(days) : updater;
+    onChangeWeekDays?.(next);
+  };
 
   // Mapeia a categoria/tipo da atividade a partir da recomendação do motor.
   const ACT_MAP: Record<string, { subType: string; category: PlanningCategory }> = {

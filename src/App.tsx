@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ViewPath, StudyActivity, UserPreferences, SessionCompletionReport, CadernoErroItem, EvidenceRecord, OslerBlockRecord } from './types';
 import { upsertBlockRecord } from './utils/retentionEngine';
+import { DEFAULT_WEEK_DAYS } from './utils/planningEngine';
+import { DayCapacityConfig } from './types';
 import { initialActivities, initialPreferences, initialCadernoErros, fullCurriculumHierarchy } from './data/mockData';
 import { buildStudiedCurriculum } from './utils/studiedProgress';
 import { Sidebar } from './components/Sidebar';
@@ -102,6 +104,20 @@ export default function App() {
     return [];
   });
 
+  // Disponibilidade da SEMANA (fonte central: Planejamento e Hoje leem daqui).
+  const [weekDays, setWeekDays] = useState<DayCapacityConfig[]>(() => {
+    const saved = localStorage.getItem('synapsemed_week_days');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length) return parsed;
+      } catch {
+        return DEFAULT_WEEK_DAYS;
+      }
+    }
+    return DEFAULT_WEEK_DAYS;
+  });
+
   // Registros agregados de blocos Osler (retenção/memória informada pela usuária)
   const [oslerBlocks, setOslerBlocks] = useState<OslerBlockRecord[]>(() => {
     const saved = localStorage.getItem('synapsemed_osler_blocks');
@@ -147,6 +163,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('synapsemed_osler_blocks', JSON.stringify(oslerBlocks));
   }, [oslerBlocks]);
+
+  useEffect(() => {
+    localStorage.setItem('synapsemed_week_days', JSON.stringify(weekDays));
+  }, [weekDays]);
 
   // A PONTE: telas com modelo próprio chamam isto ao concluir uma atividade,
   // passando apenas o contentId. Assim a conclusão propaga para o currículo,
@@ -342,6 +362,7 @@ export default function App() {
       localStorage.removeItem('synapsemed_manual_studied');
       localStorage.removeItem('synapsemed_evidence_log');
       localStorage.removeItem('synapsemed_osler_blocks');
+      localStorage.removeItem('synapsemed_week_days');
       localStorage.removeItem('synapsemed_weekly_completed_minutes');
       localStorage.setItem('synapsemed_storage_version', CURRENT_STORAGE_VERSION);
     }
@@ -351,6 +372,7 @@ export default function App() {
     setManualStudiedContentIds([]);
     setEvidenceLog([]);
     setOslerBlocks([]);
+    setWeekDays(DEFAULT_WEEK_DAYS);
     setCurrentPath('hoje');
     showToast('Ambiente restaurado para o início dos estudos (0% concluído).');
   };
@@ -442,6 +464,7 @@ export default function App() {
               onContentStudied={handleContentStudied}
               curriculum={studiedCurriculum}
               oslerBlocks={oslerBlocks}
+              weekDays={weekDays}
             />
           )}
 
@@ -452,6 +475,8 @@ export default function App() {
               onContentStudied={handleContentStudied}
               curriculum={studiedCurriculum}
               oslerBlocks={oslerBlocks}
+              weekDays={weekDays}
+              onChangeWeekDays={setWeekDays}
             />
           )}
 

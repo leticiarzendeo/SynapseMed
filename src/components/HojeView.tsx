@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserPreferences, ErrorReasonType, ContentItem, AreaItem, OslerBlockRecord } from '../types';
+import { UserPreferences, ErrorReasonType, ContentItem, AreaItem, OslerBlockRecord, DayCapacityConfig } from '../types';
 import { getContentState } from '../utils/contentState';
 import { buildTodayPlan, rankContentsByPriority, ContentPriority, ActivityKind } from '../utils/priorityEngine';
 import { computePace } from '../utils/paceEngine';
@@ -54,6 +54,8 @@ interface HojeViewProps {
   curriculum?: AreaItem[];
   /** Blocos Osler para ligar o fator revisão no plano do dia. */
   oslerBlocks?: OslerBlockRecord[];
+  /** Disponibilidade da semana (fonte central) para sugerir a fatia de hoje. */
+  weekDays?: DayCapacityConfig[];
 }
 
 export const HojeView: React.FC<HojeViewProps> = ({
@@ -63,9 +65,30 @@ export const HojeView: React.FC<HojeViewProps> = ({
   onContentStudied,
   curriculum,
   oslerBlocks = [],
+  weekDays,
 }) => {
+  // Fatia de hoje sugerida a partir da semana: capacidade do dia de hoje, ou
+  // média dos dias com capacidade > 0 (dias de descanso não entram).
+  const suggestedTodayMin = React.useMemo(() => {
+    if (!weekDays || !weekDays.length) return 100;
+    const todayKey = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'][
+      new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })).getDay()
+    ];
+    const todayCfg = weekDays.find((d) => d.key === todayKey);
+    if (todayCfg && todayCfg.capacityMin > 0) return todayCfg.capacityMin;
+    // fallback: média dos dias ativos
+    const active = weekDays.filter((d) => d.capacityMin > 0);
+    if (!active.length) return 100;
+    return Math.round(active.reduce((s, d) => s + d.capacityMin, 0) / active.length);
+  }, [weekDays]);
   // Cota de disponibilidade diária (padrão 100 min / 1h40)
-  const [availableTodayMin, setAvailableTodayMin] = useState<number>(100);
+  const [availableTodayMin, setAvailableTodayMin] = useState<number>(suggestedTodayMin);
+  // Se a usuária não ajustou manualmente o tempo de hoje, ele acompanha a
+  // sugestão derivada da semana (que agora é central e persistida).
+  const [todayManuallySet, setTodayManuallySet] = useState(false);
+  useEffect(() => {
+    if (!todayManuallySet) setAvailableTodayMin(suggestedTodayMin);
+  }, [suggestedTodayMin, todayManuallySet]);
 
   // Converte a recomendação do motor de prioridade (ContentPriority) para o
   // formato de card usado pela tela (ActivityItem).
@@ -314,6 +337,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
 
   const handleSelectAvailableTime = (min: number) => {
     setAvailableTodayMin(min);
+    setTodayManuallySet(true);
     // O plano recomputa automaticamente (useMemo/useEffect) a partir do novo
     // tempo disponível e do currículo real — sem listas fixas.
     showToast(
