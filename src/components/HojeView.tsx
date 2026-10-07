@@ -264,7 +264,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
       originalActivity: original,
       chosenActivity: newActivity,
       weeklyPlanImpact: `A atividade de ${original.name} (${original.durationMin} min) sob as bancas USP/UNIFESP foi postergada para quarta-feira, mantendo a cota de ${preferences.weeklyHoursTarget}h da semana perfeitamente equilibrada.`,
-      timelineTwoYearImpact: `Ritmo de 2 anos preservado (7h35 necessárias vs ${preferences.weeklyHoursTarget}h00 disponíveis). Deslocamento de 1 bloco de consolidação sem risco de atraso no cronograma.`,
+      timelineTwoYearImpact: `Ritmo de 2 anos considerado (${pace.hoursPerWeekNeeded}h/semana necessárias vs ${preferences.weeklyHoursTarget}h disponíveis).`,
       displacedActivities: [
         `${original.name} (${original.durationMin} min) postergado para quarta-feira`,
         `${newActivity.name} (${newActivity.durationMin} min) alocado no bloco de hoje`,
@@ -343,7 +343,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
     if (action === 'reprogramar') {
       showToast(`🟢 ${item.name} reprogramado para amanhã às 08h. Ritmo semanal preservado.`);
     } else if (action === 'adiar') {
-      showToast(`🟡 ${item.name} adiado para semana que vem. Ritmo necessário ajustado de 7h35 para 7h45/semana.`);
+      showToast(`🟡 ${item.name} adiado para a próxima semana. O ritmo necessário é recalculado automaticamente.`);
     } else {
       showToast(`⚠️ ${item.name} removido do ciclo imediato. A prioridade deste conteúdo será reavaliada.`);
     }
@@ -370,10 +370,21 @@ export const HojeView: React.FC<HojeViewProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-extrabold text-on-surface tracking-tight">
-              Bom dia, {preferences.name.split(' ')[0] || 'Letícia'}.
+              {(() => {
+                const h = Number(
+                  new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo', hour: '2-digit', hour12: false })
+                );
+                const saud = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
+                return `${saud}, ${preferences.name.split(' ')[0] || 'Letícia'}.`;
+              })()}
             </h1>
             <p className="text-xs text-secondary mt-0.5 font-medium">
-              Hoje é segunda-feira, 7 de setembro • Cérebro de Priorização Ativo
+              {(() => {
+                const hoje = new Date().toLocaleDateString('pt-BR', {
+                  timeZone: 'America/Sao_Paulo', weekday: 'long', day: 'numeric', month: 'long',
+                });
+                return `Hoje é ${hoje}`;
+              })()}
             </p>
           </div>
 
@@ -494,11 +505,17 @@ export const HojeView: React.FC<HojeViewProps> = ({
               </span>
 
               <div className="flex items-center gap-2">
-                <span className="text-secondary">Ritmo necessário:</span>
-                <span className="font-code-metric font-bold text-on-surface">7h35/semana</span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[0.6875rem]">
-                  <span>🟢</span>
-                  <span>Você está no ritmo</span>
+                <span className="text-secondary">Ritmo necessário (meta dez/2028):</span>
+                <span className="font-code-metric font-bold text-on-surface">{pace.hoursPerWeekNeeded}h/semana</span>
+                <span
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[0.6875rem]"
+                  style={{
+                    background: pace.fitsInPlan ? '#dcfce7' : '#fef3c7',
+                    color: pace.fitsInPlan ? '#166534' : '#92400e',
+                  }}
+                >
+                  <span>{pace.fitsInPlan ? '🟢' : '🟠'}</span>
+                  <span>{pace.fitsInPlan ? 'Dentro da sua disponibilidade' : 'Acima da sua disponibilidade'}</span>
                 </span>
               </div>
             </div>
@@ -1449,7 +1466,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
               >
                 <div className="text-xs font-bold text-on-surface">Adiar para a próxima semana</div>
                 <div className="text-[0.6875rem] text-amber-700 font-semibold mt-0.5">
-                  🟡 Ritmo necessário subirá levemente de 7h35 para 7h45/semana.
+                  🟡 O ritmo necessário é recalculado ao adiar atividades.
                 </div>
               </button>
 
