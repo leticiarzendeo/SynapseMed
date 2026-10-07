@@ -13,7 +13,6 @@ import {
   WEEK_PRESETS,
   getAdaptiveWeeklyBudget,
   ICC_TWO_YEAR_FSRS_LADDER,
-  PROVISIONAL_EVIDENCE_CASE,
   calculateDeficitImpact,
   DURATION_CALIBRATION_FACTORS,
 } from '../utils/planningEngine';
@@ -43,6 +42,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
 
   // Filter por categoria
   const [activeFilter, setActiveFilter] = useState<'todas' | PlanningCategory>('todas');
+  const [showBudget, setShowBudget] = useState(false); // orçamento semanal recolhido por padrão
 
   // Weekly capacity & presets
   const [currentPreset, setCurrentPreset] = useState<WeekPresetType>('normal_8h');
@@ -317,11 +317,8 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
               <span className="text-on-surface">Integração Diário ↔ Semanal ↔ 2 Anos</span>
             </div>
             <h1 className="text-2xl font-black text-on-surface tracking-tight mt-1">
-              Algoritmo de Planejamento em Horas
+              Planejamento em horas
             </h1>
-            <p className="text-xs text-secondary mt-0.5">
-              O algoritmo não preenche o tempo com qualquer coisa: ele aloca cada minuto onde há maior retorno para o horizonte de 2 anos.
-            </p>
           </div>
 
           {/* Status Geral de Ritmo */}
@@ -420,19 +417,6 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
           </div>
         </div>
 
-        {/* Banner Explicativo: Regra de Ouro dos 4 Conceitos de Tempo */}
-        <div className="p-3.5 rounded-2xl bg-surface-container-low border border-surface-container flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2.5">
-            <span className="material-symbols-outlined text-primary text-base">architecture</span>
-            <div className="text-secondary">
-              <strong className="text-on-surface font-bold">Regra dos 4 Conceitos de Tempo:</strong>{' '}
-              1. Capacidade (<strong>{totalWeeklyCapacityHours}h</strong>) • 2. Planejado (<strong>{totalPlannedHours}h</strong>) • 3. Realizado (<strong>{totalCompletedHours}h</strong>) • 4. Extraordinário (<strong>3h de Simulados</strong>).
-            </div>
-          </div>
-          <span className="px-2.5 py-1 rounded-lg bg-purple-100 text-purple-900 font-bold text-[0.6875rem] whitespace-nowrap self-start md:self-auto">
-            Simulados ficam FORA das 8h regulares
-          </span>
-        </div>
       </section>
 
       {/* ========================================================================= */}
@@ -448,7 +432,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
           }`}
         >
           <span>📅</span>
-          <span>Grade Semanal (Segunda a Domingo)</span>
+          <span>Grade Semanal</span>
         </button>
 
         <button
@@ -460,7 +444,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
           }`}
         >
           <span>🧠</span>
-          <span>Horizonte dos 2 Anos: "Nenhum Conteúdo é Aposentado"</span>
+          <span>Horizonte dos 2 anos</span>
         </button>
 
         <button
@@ -472,7 +456,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
           }`}
         >
           <span>⚖️</span>
-          <span>Simulador de Déficit &amp; Honestidade Matemática</span>
+          <span>Simulador de horas</span>
         </button>
       </div>
 
@@ -548,14 +532,28 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
             </div>
           </section>
 
-          {/* ORÇAMENTO SEMANAL ESTRATÉGICO NAS 4 CATEGORIAS */}
+          {/* ORÇAMENTO SEMANAL ESTRATÉGICO NAS 4 CATEGORIAS (recolhível) */}
           <section className="bg-surface-container-lowest rounded-3xl p-5 border border-surface-container shadow-xs space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[0.6875rem] font-bold text-secondary uppercase tracking-wider flex items-center gap-1.5">
+                <span>📊</span>
+                <span>Orçamento semanal</span>
+              </span>
+              <button
+                onClick={() => setShowBudget((v) => !v)}
+                className="w-7 h-7 rounded-lg hover:bg-surface-container flex items-center justify-center text-secondary"
+                title={showBudget ? 'Recolher' : 'Ver orçamento semanal'}
+              >
+                <span className="material-symbols-outlined text-lg">
+                  {showBudget ? 'expand_less' : 'expand_more'}
+                </span>
+              </button>
+            </div>
+
+            {showBudget && (
+            <>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-container pb-3">
               <div>
-                <span className="text-[0.6875rem] font-bold text-secondary uppercase tracking-wider flex items-center gap-1.5">
-                  <span>📊</span>
-                  <span>ORÇAMENTO SEMANAL ADAPTATIVO (4 CATEGORIAS)</span>
-                </span>
                 <h3 className="text-base font-black text-on-surface mt-0.5">
                   {weeklyBudget.phaseName} — {weeklyBudget.totalHours}h00 Alocadas
                 </h3>
@@ -659,6 +657,8 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                 </span>
               </div>
             </div>
+            </>
+            )}
           </section>
 
           {/* BARRA DE CONTROLES: CAMADA DUPLA (ALGORITMO VS USUÁRIO) & FILTROS & AÇÕES */}
@@ -690,8 +690,8 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                 </button>
               </div>
 
-              {/* Filtros de Categoria */}
-              <div className="flex items-center gap-1 overflow-x-auto">
+              {/* Filtros de Categoria (2 linhas, visíveis) */}
+              <div className="flex flex-wrap items-center gap-1.5">
                 {[
                   { key: 'todas', label: 'Todas' },
                   { key: 'avanco', label: '🆕 Avanço' },
@@ -702,7 +702,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                   <button
                     key={f.key}
                     onClick={() => setActiveFilter(f.key as any)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                    className={`px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
                       activeFilter === f.key
                         ? 'bg-surface-container-lowest text-on-surface shadow-xs font-bold'
                         : 'text-secondary hover:text-on-surface'
@@ -1146,45 +1146,6 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
             </div>
           </section>
 
-          {/* CASO DE HONESTIDADE DO ALGORITMO: CONTEÚDO ESTUDADO RECENTEMENTE */}
-          <section className="bg-surface-container-lowest rounded-3xl p-6 border border-surface-container shadow-xs space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-base">⚖️</span>
-                <h3 className="text-base font-black text-on-surface">
-                  Honestidade Algorítmica: Conteúdo Estudado Há Poucos Dias
-                </h3>
-              </div>
-              <span className="text-[0.6875rem] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
-                Sem Ilusão de Domínio
-              </span>
-            </div>
-
-            <p className="text-xs text-secondary leading-relaxed">
-              Se você estudar um conteúdo novo 10 dias antes do final dos dois anos e acertar 90% dos exercícios, o aplicativo <strong>NUNCA dirá 🟢 "Domínio comprovado de 90%"</strong>. Falta evidência de retenção e aplicação prática.
-            </p>
-
-            <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <strong className="text-xs text-amber-950 font-bold">{PROVISIONAL_EVIDENCE_CASE.headline}</strong>
-              </div>
-
-              <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                {PROVISIONAL_EVIDENCE_CASE.badges.map((b) => (
-                  <span
-                    key={b.label}
-                    className="text-[0.625rem] font-bold px-2 py-0.5 rounded-md bg-white border border-amber-200 text-amber-900 shadow-2xs"
-                  >
-                    {b.label}
-                  </span>
-                ))}
-              </div>
-
-              <p className="text-xs text-amber-900/90 leading-relaxed pt-1">
-                {PROVISIONAL_EVIDENCE_CASE.explanation}
-              </p>
-            </div>
-          </section>
         </div>
       )}
 
