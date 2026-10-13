@@ -455,12 +455,6 @@ export const CurriculoView: React.FC<CurriculoViewProps> = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm pb-space-xs">
         <div>
-          <div className="flex items-center gap-space-xs text-secondary font-label-md">
-            <span className="material-symbols-outlined text-[1rem]">account_tree</span>
-            <span>Currículo Central Medway &amp; Mapeamento de Fontes</span>
-            <span className="mx-space-2xs text-outline-variant">•</span>
-            <span className="font-code-metric text-primary font-medium">Regra Estrutural nº 1</span>
-          </div>
           <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight mt-space-2xs">
             Currículo &amp; Evidências de Domínio
           </h1>
