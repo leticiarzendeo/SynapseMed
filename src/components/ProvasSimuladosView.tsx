@@ -808,7 +808,7 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
           </button>
           <button
             onClick={() => setShowManualRegistro((v) => !v)}
-            className="px-4 py-2 rounded-lg bg-primary text-white font-medium text-sm whitespace-nowrap"
+            className="px-4 py-2 rounded-lg bg-primary text-on-primary font-medium text-sm whitespace-nowrap"
           >
             {showManualRegistro ? 'Fechar registro manual' : '+ Registrar prova (manual)'}
           </button>
