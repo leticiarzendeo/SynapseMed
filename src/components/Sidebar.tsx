@@ -17,6 +17,7 @@ const navItems: { path: ViewPath; label: string; icon: string }[] = [
   { path: 'revisoes', label: 'Revisões', icon: 'replay' },
   { path: 'provas-e-simulados', label: 'Provas e Simulados', icon: 'assignment' },
   { path: 'analises', label: 'Análises', icon: 'psychology' },
+  { path: 'historico', label: 'Histórico', icon: 'history' },
   { path: 'configuracoes', label: 'Configurações', icon: 'tune' },
 ];
 
