@@ -189,6 +189,39 @@ export default function App() {
     setCadernoErros((prev) => [item, ...prev]);
   };
 
+  // Registro de uma sessão de TEORIA (aba Hoje): grava evidências de pré e pós
+  // (cada uma alimenta o conhecimento/domínio) e marca o conteúdo como estudado.
+  const handleRecordTheory = (input: {
+    contentId: string;
+    contentName: string;
+    theoryCompleted: boolean;
+    preTotal?: number; preCorrect?: number;
+    postTotal?: number; postCorrect?: number;
+    durationMinutes: number;
+    notes?: string;
+  }) => {
+    const today = new Date().toISOString().split('T')[0];
+    const records: EvidenceRecord[] = [];
+    if (input.preTotal && input.preTotal > 0) {
+      records.push({
+        id: `ev-pre-${input.contentId}-${Date.now()}`,
+        contentId: input.contentId, date: today, kind: 'avanco',
+        questionsTotal: input.preTotal, questionsCorrect: input.preCorrect ?? 0,
+        durationMinutes: 0, source: 'Teoria Medway — pré-teoria',
+      });
+    }
+    if (input.postTotal && input.postTotal > 0) {
+      records.push({
+        id: `ev-post-${input.contentId}-${Date.now()}`,
+        contentId: input.contentId, date: today, kind: 'avanco',
+        questionsTotal: input.postTotal, questionsCorrect: input.postCorrect ?? 0,
+        durationMinutes: input.durationMinutes, source: 'Teoria Medway — pós-teoria',
+      });
+    }
+    if (records.length) setEvidenceLog((prev) => [...records, ...prev]);
+    if (input.theoryCompleted || records.length) handleContentStudied(input.contentId);
+  };
+
   // Salva/atualiza um bloco Osler informado pela usuária (retenção/memória).
   const handleSaveOslerBlock = (input: {
     contentId: string; blockName: string;
@@ -462,6 +495,8 @@ export default function App() {
               onNavigateToPlanejamento={() => setCurrentPath('planejamento')}
               onNavigateToCurriculo={() => setCurrentPath('curriculo')}
               onContentStudied={handleContentStudied}
+              onRecordTheory={handleRecordTheory}
+              onNavigate={setCurrentPath}
               curriculum={studiedCurriculum}
               oslerBlocks={oslerBlocks}
               weekDays={weekDays}
