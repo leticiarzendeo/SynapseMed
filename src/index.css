@@ -166,3 +166,16 @@
   -webkit-font-smoothing: antialiased;
 }
 
+
+/* ============================================================
+   Legibilidade do verde-limão no fundo claro.
+   ============================================================ */
+/* Fundos verdes sólidos (botões, abas ativas, badges) ganham borda fina escura */
+.bg-primary {
+  border: 1px solid rgba(32, 31, 49, 0.6);
+}
+/* Texto/ícones "verde" usam um verde mais FECHADO (com preto), legível no claro,
+   em vez do neon puro. Mantém a identidade, mas lê bem. */
+.text-primary {
+  color: #6F8F1F !important;
+}
