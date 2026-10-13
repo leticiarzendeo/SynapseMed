@@ -7,6 +7,7 @@ export type ViewPath =
   | 'revisoes'
   | 'provas-e-simulados'
   | 'analises'
+  | 'historico'
   | 'configuracoes';
 
 export type ErrorReasonType =
