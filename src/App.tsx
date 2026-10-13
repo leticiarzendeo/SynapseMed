@@ -15,6 +15,7 @@ import { DesempenhoView } from './components/DesempenhoView';
 import { RevisoesView } from './components/RevisoesView';
 import { ProvasSimuladosView } from './components/ProvasSimuladosView';
 import { AnalisesView } from './components/AnalisesView';
+import { HistoricoView } from './components/HistoricoView';
 import { ConfiguracoesView } from './components/ConfiguracoesView';
 import { CoordenadorSessaoModal } from './components/CoordenadorSessaoModal';
 import { RegistrarEstudoModal } from './components/RegistrarEstudoModal';
@@ -555,6 +556,14 @@ export default function App() {
 
           {currentPath === 'analises' && (
             <AnalisesView cadernoErros={cadernoErros} curriculum={studiedCurriculum} preferences={preferences} />
+          )}
+
+          {currentPath === 'historico' && (
+            <HistoricoView
+              evidenceLog={evidenceLog}
+              oslerBlocks={oslerBlocks}
+              curriculum={studiedCurriculum}
+            />
           )}
 
           {currentPath === 'configuracoes' && (
