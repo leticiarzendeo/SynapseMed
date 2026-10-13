@@ -56,6 +56,14 @@ interface HojeViewProps {
   oslerBlocks?: OslerBlockRecord[];
   /** Disponibilidade da semana (fonte central) para sugerir a fatia de hoje. */
   weekDays?: DayCapacityConfig[];
+  /** Registra uma sessão de teoria (pré/pós) alimentando o domínio. */
+  onRecordTheory?: (input: {
+    contentId: string; contentName: string; theoryCompleted: boolean;
+    preTotal?: number; preCorrect?: number; postTotal?: number; postCorrect?: number;
+    durationMinutes: number; notes?: string;
+  }) => void;
+  /** Navegar para outra aba (ex.: levar questões/revisão à aba certa). */
+  onNavigate?: (path: any) => void;
 }
 
 export const HojeView: React.FC<HojeViewProps> = ({
@@ -66,6 +74,8 @@ export const HojeView: React.FC<HojeViewProps> = ({
   curriculum,
   oslerBlocks = [],
   weekDays,
+  onRecordTheory,
+  onNavigate,
 }) => {
   // Fatia de hoje sugerida a partir da semana: capacidade do dia de hoje, ou
   // média dos dias com capacidade > 0 (dias de descanso não entram).
@@ -184,6 +194,14 @@ export const HojeView: React.FC<HojeViewProps> = ({
   const [finishDifficulty, setFinishDifficulty] = useState<'facil' | 'normal' | 'dificil'>('dificil');
   const [selectedErrorReasons, setSelectedErrorReasons] = useState<ErrorReasonType[]>(['esqueci']);
   const [finishNotes, setFinishNotes] = useState('');
+  // Campos específicos de TEORIA (pré e pós separados)
+  const [theoryDone, setTheoryDone] = useState(false);
+  const [didPre, setDidPre] = useState(false);
+  const [preTotal, setPreTotal] = useState('');
+  const [preCorrect, setPreCorrect] = useState('');
+  const [didPost, setDidPost] = useState(false);
+  const [postTotal, setPostTotal] = useState('');
+  const [postCorrect, setPostCorrect] = useState('');
 
   // Estados para ferramentas de setinha (recolhidos por padrão para evitar poluição visual)
   const [expandedWhyNow, setExpandedWhyNow] = useState<Record<string, boolean>>({});
@@ -232,17 +250,30 @@ export const HojeView: React.FC<HojeViewProps> = ({
   };
 
   const handleStartSession = (activity: ActivityItem) => {
+    const sub = activity.subType.toLowerCase();
+    const isTheory = sub.includes('teoria') || sub.includes('exerc');
+    // Tipos que têm aba própria de registro: direciona para lá (Etapa C).
+    if (!isTheory) {
+      if (sub.includes('quest') || sub.includes('prova')) {
+        onNavigate?.('provas-e-simulados');
+        showToast(`Abra "${activity.name}" em Provas & Simulados para registrar.`);
+        return;
+      }
+      if (sub.includes('revis') || sub.includes('osler')) {
+        onNavigate?.('revisoes');
+        showToast(`Registre a revisão de "${activity.name}" na aba Revisões.`);
+        return;
+      }
+    }
+    // TEORIA (e exercícios): registro completo aqui mesmo.
     setActiveStudySession(activity);
-    const isTheory = activity.subType.toLowerCase().includes('teoria');
-    setSessionTimerSeconds(0); // Cronômetro inicia do zero para registro real
+    setSessionTimerSeconds(0);
     setIsTimerRunning(true);
-    setFinishExercisesDone(0);
-    setFinishExercisesTotal(isTheory ? 10 : 20);
-    setFinishCorrectAnswers(0);
     setFinishTimeMinutes(activity.durationMin);
-    setFinishTheoryCompleted(false);
-    setSelectedErrorReasons([]);
     setFinishNotes('');
+    setTheoryDone(false);
+    setDidPre(false); setPreTotal(''); setPreCorrect('');
+    setDidPost(false); setPostTotal(''); setPostCorrect('');
   };
 
   const handleCompleteDirect = (activity: ActivityItem) => {
@@ -266,14 +297,23 @@ export const HojeView: React.FC<HojeViewProps> = ({
 
   const handleSaveSession = () => {
     if (!activeStudySession) return;
-    setCompletedMinutes((prev) => prev + finishTimeMinutes);
+    onRecordTheory?.({
+      contentId: activeStudySession.contentId || '',
+      contentName: activeStudySession.name,
+      theoryCompleted: theoryDone,
+      preTotal: didPre ? Number(preTotal) || 0 : undefined,
+      preCorrect: didPre ? Number(preCorrect) || 0 : undefined,
+      postTotal: didPost ? Number(postTotal) || 0 : undefined,
+      postCorrect: didPost ? Number(postCorrect) || 0 : undefined,
+      durationMinutes: Math.round(sessionTimerSeconds / 60) || finishTimeMinutes,
+      notes: finishNotes,
+    });
+    setCompletedMinutes((prev) => prev + (Math.round(sessionTimerSeconds / 60) || finishTimeMinutes));
     setActivities((prev) => prev.filter((a) => a.id !== activeStudySession.id));
-    onContentStudied?.(activeStudySession.contentId);
     setShowFinishModal(false);
     setActiveStudySession(null);
-    showToast(
-      `Sessão de ${activeStudySession.name} concluída! Progresso registrado.`
-    );
+    setIsTimerRunning(false);
+    showToast(`Sessão de ${activeStudySession.name} registrada! Domínio atualizado.`);
   };
 
   const handleSwapActivity = (oldActivityId: string, newActivity: ActivityItem) => {
@@ -1286,145 +1326,79 @@ export const HojeView: React.FC<HojeViewProps> = ({
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-surface-container-lowest rounded-3xl max-w-lg w-full p-6 sm:p-7 border border-surface-container shadow-2xl space-y-5 my-8 animate-in fade-in zoom-in-95">
             <div className="text-center space-y-1">
-              <span className="text-3xl">🎉</span>
-              <h2 className="text-lg font-black text-on-surface">Sessão concluída com sucesso!</h2>
+              <span className="text-3xl">📘</span>
+              <h2 className="text-lg font-black text-on-surface">Registrar estudo de teoria</h2>
               <p className="text-xs text-secondary">
-                Preencha os resultados para alimentar o domínio e recalcular o FSRS.
+                Informe o que você fez — isso alimenta seu domínio e as revisões.
               </p>
             </div>
 
             <div className="space-y-4 text-xs">
-              {/* Tempo estudado */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-surface-container-low border border-surface-container">
-                <span className="font-bold text-on-surface">Tempo estudado</span>
-                <div className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    value={finishTimeMinutes}
-                    onChange={(e) => setFinishTimeMinutes(Number(e.target.value))}
-                    className="w-16 h-8 px-2 text-right bg-surface-container-lowest border border-surface-container rounded-lg font-code-metric font-bold text-on-surface"
-                  />
-                  <span className="font-bold text-secondary">min</span>
-                </div>
-              </div>
-
-              {/* Teoria Concluída */}
+              {/* Teoria concluída */}
               <label className="flex items-center justify-between p-3 rounded-xl bg-surface-container-low border border-surface-container cursor-pointer">
-                <span className="font-bold text-on-surface">Teoria</span>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={finishTheoryCompleted}
-                    onChange={(e) => setFinishTheoryCompleted(e.target.checked)}
-                    className="rounded text-primary w-4 h-4"
-                  />
-                  <span className="text-xs font-semibold text-emerald-800">
-                    {finishTheoryCompleted ? 'Concluída ☑' : 'Pendente'}
-                  </span>
-                </div>
+                <span className="font-bold text-on-surface">✅ Concluí a teoria (videoaula/apostila)</span>
+                <input type="checkbox" checked={theoryDone} onChange={(e) => setTheoryDone(e.target.checked)} className="w-5 h-5" />
               </label>
 
-              {/* Exercícios Realizados e Acertos */}
-              <div className="p-3 rounded-xl bg-surface-container-low border border-surface-container space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-on-surface">Exercícios realizados</span>
-                  <div className="flex items-center gap-1 font-code-metric font-bold">
-                    <input
-                      type="number"
-                      value={finishExercisesDone}
-                      onChange={(e) => setFinishExercisesDone(Number(e.target.value))}
-                      className="w-12 h-7 px-1 text-center bg-surface-container-lowest border border-surface-container rounded font-bold"
-                    />
-                    <span>/</span>
-                    <input
-                      type="number"
-                      value={finishExercisesTotal}
-                      onChange={(e) => setFinishExercisesTotal(Number(e.target.value))}
-                      className="w-12 h-7 px-1 text-center bg-surface-container-lowest border border-surface-container rounded font-bold"
-                    />
+              {/* Exercícios PRÉ-teoria */}
+              <div className="p-3 rounded-xl bg-surface-container-low border border-surface-container space-y-2">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span className="font-bold text-on-surface">Fiz os exercícios PRÉ-teoria</span>
+                  <input type="checkbox" checked={didPre} onChange={(e) => setDidPre(e.target.checked)} className="w-5 h-5" />
+                </label>
+                {didPre && (
+                  <div className="flex items-center gap-3 pt-1">
+                    <div className="flex items-center gap-1">
+                      <span className="text-secondary">Acertei</span>
+                      <input type="number" min="0" value={preCorrect} onChange={(e) => setPreCorrect(e.target.value)} className="w-14 h-8 px-2 text-right bg-surface-container-lowest border border-surface-container rounded-lg font-code-metric font-bold" />
+                    </div>
+                    <span className="text-secondary">de</span>
+                    <div className="flex items-center gap-1">
+                      <input type="number" min="0" value={preTotal} onChange={(e) => setPreTotal(e.target.value)} className="w-14 h-8 px-2 text-right bg-surface-container-lowest border border-surface-container rounded-lg font-code-metric font-bold" />
+                      <span className="text-secondary">questões</span>
+                    </div>
                   </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-1 border-t border-surface-container/60">
-                  <span className="font-bold text-on-surface">Acertos</span>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      value={finishCorrectAnswers}
-                      onChange={(e) => setFinishCorrectAnswers(Number(e.target.value))}
-                      className="w-12 h-7 px-1 text-center bg-surface-container-lowest border border-surface-container rounded font-bold"
-                    />
-                    <span className="font-code-metric font-bold text-emerald-700">
-                      ({((finishCorrectAnswers / Math.max(1, finishExercisesDone)) * 100).toFixed(1)}%)
-                    </span>
-                  </div>
-                </div>
+                )}
               </div>
 
-              {/* Dificuldade Percebida */}
-              <div className="space-y-1.5">
-                <span className="font-bold text-on-surface block">Dificuldade sentida</span>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['facil', 'normal', 'dificil'] as const).map((dif) => (
-                    <button
-                      key={dif}
-                      type="button"
-                      onClick={() => setFinishDifficulty(dif)}
-                      className={`py-2 rounded-xl border text-xs font-bold capitalize transition-all ${
-                        finishDifficulty === dif
-                          ? 'bg-primary text-on-primary border-primary shadow-xs'
-                          : 'bg-surface-container-low border-surface-container text-secondary hover:text-on-surface'
-                      }`}
-                    >
-                      {dif === 'facil' ? '○ Fácil' : dif === 'normal' ? '○ Normal' : '● Difícil'}
-                    </button>
-                  ))}
-                </div>
+              {/* Exercícios PÓS-teoria */}
+              <div className="p-3 rounded-xl bg-surface-container-low border border-surface-container space-y-2">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span className="font-bold text-on-surface">Fiz os exercícios PÓS-teoria</span>
+                  <input type="checkbox" checked={didPost} onChange={(e) => setDidPost(e.target.checked)} className="w-5 h-5" />
+                </label>
+                {didPost && (
+                  <div className="flex items-center gap-3 pt-1">
+                    <div className="flex items-center gap-1">
+                      <span className="text-secondary">Acertei</span>
+                      <input type="number" min="0" value={postCorrect} onChange={(e) => setPostCorrect(e.target.value)} className="w-14 h-8 px-2 text-right bg-surface-container-lowest border border-surface-container rounded-lg font-code-metric font-bold" />
+                    </div>
+                    <span className="text-secondary">de</span>
+                    <div className="flex items-center gap-1">
+                      <input type="number" min="0" value={postTotal} onChange={(e) => setPostTotal(e.target.value)} className="w-14 h-8 px-2 text-right bg-surface-container-lowest border border-surface-container rounded-lg font-code-metric font-bold" />
+                      <span className="text-secondary">questões</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Motivos dos Erros (7 Categorias) */}
-              <div className="space-y-2">
-                <span className="font-bold text-on-surface block">
-                  Motivos dos erros (obrigatório para calibragem)
+              {/* Tempo estudado (do cronômetro) */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-surface-container-low border border-surface-container">
+                <span className="font-bold text-on-surface">Tempo estudado</span>
+                <span className="font-code-metric font-bold text-on-surface">
+                  {Math.round(sessionTimerSeconds / 60) || finishTimeMinutes} min
                 </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                  {[
-                    { key: 'esqueci', label: 'Esqueci' },
-                    { key: 'nao_sabia', label: 'Não sabia' },
-                    { key: 'interpretacao', label: 'Interpretei errado' },
-                    { key: 'desatencao', label: 'Desatenção' },
-                    { key: 'entre_duas', label: 'Fiquei entre alternativas' },
-                    { key: 'raciocinio', label: 'Erro de raciocínio' },
-                    { key: 'outro', label: 'Outro' },
-                  ].map((m) => (
-                    <label
-                      key={m.key}
-                      className="flex items-center gap-2 p-2 rounded-lg bg-surface-container-low border border-surface-container cursor-pointer hover:bg-surface-container"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedErrorReasons.includes(m.key as ErrorReasonType)}
-                        onChange={() => toggleErrorReason(m.key as ErrorReasonType)}
-                        className="rounded text-primary w-3.5 h-3.5"
-                      />
-                      <span className="text-[0.6875rem] text-on-surface">{m.label}</span>
-                    </label>
-                  ))}
-                </div>
               </div>
 
-              {/* Observações Clínicas Opcionais */}
-              <div className="space-y-1">
-                <span className="font-bold text-on-surface block">Observações (opcional)</span>
-                <textarea
-                  value={finishNotes}
-                  onChange={(e) => setFinishNotes(e.target.value)}
-                  placeholder="Ex: Pegadinha recorrente da banca na indicação de iSGLT2 na ICFER..."
-                  rows={2}
-                  className="w-full p-2 rounded-xl bg-surface-container-low border border-surface-container text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
-                />
+              {/* Anotações livres */}
+              <div className="p-3 rounded-xl bg-surface-container-low border border-surface-container">
+                <span className="font-bold text-on-surface block mb-1">Anotações (opcional)</span>
+                <textarea value={finishNotes} onChange={(e) => setFinishNotes(e.target.value)} rows={2}
+                  placeholder="ex: revisar o mecanismo X; ficou dúvida em Y"
+                  className="w-full p-2 bg-surface-container-lowest border border-surface-container rounded-lg text-xs" />
               </div>
             </div>
+
 
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-surface-container">
               <button
