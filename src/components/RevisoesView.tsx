@@ -122,7 +122,7 @@ export const RevisoesView: React.FC<RevisoesViewProps> = ({
         </div>
         <button
           onClick={() => setFormOpen((v) => !v)}
-          className="px-4 py-2 rounded-lg bg-primary text-white font-medium text-sm whitespace-nowrap"
+          className="px-4 py-2 rounded-lg bg-primary text-on-primary font-medium text-sm whitespace-nowrap"
         >
           {formOpen ? 'Fechar' : '+ Informar bloco Osler'}
         </button>
@@ -172,7 +172,7 @@ export const RevisoesView: React.FC<RevisoesViewProps> = ({
                 </strong></>
               ) : 'Preencha a distribuição dos cartões'}
             </span>
-            <button onClick={handleSave} className="px-4 py-2 rounded-lg bg-primary text-white font-medium text-sm">
+            <button onClick={handleSave} className="px-4 py-2 rounded-lg bg-primary text-on-primary font-medium text-sm">
               Salvar bloco
             </button>
           </div>

@@ -1201,7 +1201,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                     onClick={() => setSimulatedDeficitHours(h)}
                     className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all ${
                       simulatedDeficitHours === h
-                        ? 'bg-primary text-white border-primary'
+                        ? 'bg-primary text-on-primary border-primary'
                         : 'bg-surface-container-low border-surface-container text-secondary hover:border-primary/40'
                     }`}
                   >
