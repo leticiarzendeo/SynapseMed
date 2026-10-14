@@ -1145,136 +1145,61 @@ export const HojeView: React.FC<HojeViewProps> = ({
               </div>
             </div>
 
-            {/* Se for sessão de Teoria: Checklist de Estudo Medway */}
-            {activeStudySession.subType.toLowerCase().includes('teoria') ? (
-              <div className="p-4 rounded-2xl bg-surface-container-low border border-surface-container space-y-3 text-xs">
-                <div className="flex items-center justify-between border-b border-surface-container/60 pb-2">
-                  <span className="font-bold text-on-surface flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-base text-primary">menu_book</span>
-                    Etapas do Estudo Teórico (Medway)
-                  </span>
-                  <span className="text-[0.6875rem] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                    {activeStudySession.modulo}
-                  </span>
-                </div>
+            {/* Registro da sessão de TEORIA (tudo numa tela só) */}
+            <div className="space-y-3 text-xs">
+              <label className="flex items-center justify-between p-3 rounded-xl bg-surface-container-low border border-surface-container cursor-pointer">
+                <span className="font-bold text-on-surface">✅ Concluí a teoria (videoaula/apostila)</span>
+                <input type="checkbox" checked={theoryDone} onChange={(e) => setTheoryDone(e.target.checked)} className="w-5 h-5" />
+              </label>
 
-                <div className="space-y-2">
-                  <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-surface-container-lowest border border-surface-container cursor-pointer hover:border-primary/40 transition-all">
-                    <input
-                      type="checkbox"
-                      checked={theoryVideoWatched}
-                      onChange={(e) => setTheoryVideoWatched(e.target.checked)}
-                      className="rounded text-primary w-4 h-4 mt-0.5"
-                    />
-                    <div className="flex-1">
-                      <span className="text-xs font-bold text-on-surface block">
-                        Videoaula Medway (45 min)
-                      </span>
-                      <span className="text-[0.6875rem] text-secondary leading-relaxed block">
-                        Conceitos de GOLD 1-4, grupos A-E, espirometria (VEF1/CVF &lt; 0.70 pós-BD) e cessação do tabagismo.
-                      </span>
+              {/* PRÉ-teoria */}
+              <div className="p-3 rounded-xl bg-surface-container-low border border-surface-container space-y-2">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span className="font-bold text-on-surface">Fiz os exercícios PRÉ-teoria</span>
+                  <input type="checkbox" checked={didPre} onChange={(e) => setDidPre(e.target.checked)} className="w-5 h-5" />
+                </label>
+                {didPre && (
+                  <div className="flex items-center gap-3 pt-1">
+                    <div className="flex items-center gap-1">
+                      <span className="text-secondary">Acertei</span>
+                      <input type="number" min="0" value={preCorrect} onChange={(e) => setPreCorrect(e.target.value)} className="w-14 h-8 px-2 text-right bg-surface-container-lowest border border-surface-container rounded-lg font-code-metric font-bold" />
                     </div>
-                  </label>
-
-                  <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-surface-container-lowest border border-surface-container cursor-pointer hover:border-primary/40 transition-all">
-                    <input
-                      type="checkbox"
-                      checked={theoryApostilaRead}
-                      onChange={(e) => setTheoryApostilaRead(e.target.checked)}
-                      className="rounded text-primary w-4 h-4 mt-0.5"
-                    />
-                    <div className="flex-1">
-                      <span className="text-xs font-bold text-on-surface block">
-                        Apostila Digital / Resumo Esquematizado
-                      </span>
-                      <span className="text-[0.6875rem] text-secondary leading-relaxed block">
-                        Revisão dos critérios de Anthonisen para exacerbação infecciosa e indicações de VNI/oxigenoterapia.
-                      </span>
+                    <span className="text-secondary">de</span>
+                    <div className="flex items-center gap-1">
+                      <input type="number" min="0" value={preTotal} onChange={(e) => setPreTotal(e.target.value)} className="w-14 h-8 px-2 text-right bg-surface-container-lowest border border-surface-container rounded-lg font-code-metric font-bold" />
+                      <span className="text-secondary">questões</span>
                     </div>
-                  </label>
-                </div>
-
-                <div className="p-2.5 rounded-xl bg-primary/5 border border-primary/20 text-[0.6875rem] text-secondary flex items-center justify-between">
-                  <span>Exercícios de fixação pós-aula:</span>
-                  <span className="font-bold text-primary">5 questões recomendadas</span>
-                </div>
-              </div>
-            ) : null}
-
-            {/* Quantas questões você fez? / Quantas acertou? */}
-            <div className="p-4 rounded-2xl bg-surface-container-low border border-surface-container space-y-3 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-on-surface">
-                  {activeStudySession.subType.toLowerCase().includes('teoria')
-                    ? 'Questões de fixação pós-vídeo realizadas'
-                    : 'Quantas questões você fez?'}
-                </span>
-                <div className="flex items-center gap-1.5 font-code-metric font-bold">
-                  <input
-                    type="number"
-                    min={1}
-                    value={finishExercisesDone}
-                    onChange={(e) => setFinishExercisesDone(Math.max(0, Number(e.target.value)))}
-                    className="w-14 h-8 px-2 text-center bg-surface-container-lowest border border-surface-container rounded-lg font-bold text-on-surface text-sm"
-                  />
-                  <span className="text-secondary">/</span>
-                  <input
-                    type="number"
-                    min={1}
-                    value={finishExercisesTotal}
-                    onChange={(e) => setFinishExercisesTotal(Math.max(1, Number(e.target.value)))}
-                    className="w-14 h-8 px-2 text-center bg-surface-container-lowest border border-surface-container rounded-lg font-bold text-on-surface text-sm"
-                  />
-                </div>
+                  </div>
+                )}
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-surface-container/60">
-                <span className="font-bold text-on-surface">Quantas acertou?</span>
-                <div className="flex items-center gap-2 font-code-metric font-bold">
-                  <input
-                    type="number"
-                    min={0}
-                    max={finishExercisesDone}
-                    value={finishCorrectAnswers}
-                    onChange={(e) => setFinishCorrectAnswers(Math.max(0, Number(e.target.value)))}
-                    className="w-14 h-8 px-2 text-center bg-surface-container-lowest border border-surface-container rounded-lg font-bold text-emerald-700 text-sm"
-                  />
-                  <span className="text-xs font-extrabold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
-                    {finishExercisesDone > 0 ? `${Math.round((finishCorrectAnswers / finishExercisesDone) * 100)}%` : '0%'}
-                  </span>
-                </div>
+              {/* PÓS-teoria */}
+              <div className="p-3 rounded-xl bg-surface-container-low border border-surface-container space-y-2">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span className="font-bold text-on-surface">Fiz os exercícios PÓS-teoria</span>
+                  <input type="checkbox" checked={didPost} onChange={(e) => setDidPost(e.target.checked)} className="w-5 h-5" />
+                </label>
+                {didPost && (
+                  <div className="flex items-center gap-3 pt-1">
+                    <div className="flex items-center gap-1">
+                      <span className="text-secondary">Acertei</span>
+                      <input type="number" min="0" value={postCorrect} onChange={(e) => setPostCorrect(e.target.value)} className="w-14 h-8 px-2 text-right bg-surface-container-lowest border border-surface-container rounded-lg font-code-metric font-bold" />
+                    </div>
+                    <span className="text-secondary">de</span>
+                    <div className="flex items-center gap-1">
+                      <input type="number" min="0" value={postTotal} onChange={(e) => setPostTotal(e.target.value)} className="w-14 h-8 px-2 text-right bg-surface-container-lowest border border-surface-container rounded-lg font-code-metric font-bold" />
+                      <span className="text-secondary">questões</span>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
 
-            {/* Motivo dos erros? (checkboxes) */}
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-on-surface">Motivo dos erros? (opcional)</span>
-                <span className="text-[0.625rem] text-secondary">Alimenta o Caderno de Erros</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                {[
-                  { key: 'nao_sabia', label: 'Não sabia' },
-                  { key: 'esqueci', label: 'Esqueci' },
-                  { key: 'interpretacao', label: 'Interpretei errado' },
-                  { key: 'desatencao', label: 'Desatenção' },
-                  { key: 'entre_duas', label: 'Fiquei entre duas alternativas' },
-                  { key: 'raciocinio', label: 'Erro de raciocínio' },
-                  { key: 'outro', label: 'Outro' },
-                ].map((m) => (
-                  <label
-                    key={m.key}
-                    className="flex items-center gap-2 p-2 rounded-xl bg-surface-container-low border border-surface-container cursor-pointer hover:bg-surface-container transition-all"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedErrorReasons.includes(m.key as ErrorReasonType)}
-                      onChange={() => toggleErrorReason(m.key as ErrorReasonType)}
-                      className="rounded text-primary w-4 h-4"
-                    />
-                    <span className="text-[0.75rem] text-on-surface font-medium">{m.label}</span>
-                  </label>
-                ))}
+              {/* Anotações */}
+              <div className="p-3 rounded-xl bg-surface-container-low border border-surface-container">
+                <span className="font-bold text-on-surface block mb-1">Anotações (opcional)</span>
+                <textarea value={finishNotes} onChange={(e) => setFinishNotes(e.target.value)} rows={2}
+                  placeholder="ex: revisar o mecanismo X; ficou dúvida em Y"
+                  className="w-full p-2 bg-surface-container-lowest border border-surface-container rounded-lg text-xs" />
               </div>
             </div>
 
