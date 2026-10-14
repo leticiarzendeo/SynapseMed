@@ -834,6 +834,8 @@ export interface UserPreferences {
   targetDeadlineDate: string; // "2028-09-07"
   targetInstitutions: string[];
   cycle: string;
+  /** Módulo de foco inicial (peso extra na priorização, sem travar os outros). */
+  focoModulo?: string;
 }
 
 // ==========================================
