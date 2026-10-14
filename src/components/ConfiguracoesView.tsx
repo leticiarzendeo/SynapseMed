@@ -17,7 +17,16 @@ export const ConfiguracoesView: React.FC<ConfiguracoesViewProps> = ({
   const [timeline, setTimeline] = useState(preferences.targetYearTimeline);
   const [institutions, setInstitutions] = useState(preferences.targetInstitutions.join(', '));
   const [cycle, setCycle] = useState(preferences.cycle);
+  const [focoModulo, setFocoModulo] = useState(preferences.focoModulo || '');
   const [savedToast, setSavedToast] = useState(false);
+
+  const MODULOS = [
+    'Cirurgia Geral',
+    'Clínica Médica',
+    'Ginecologia e Obstetrícia',
+    'Pediatria',
+    'Medicina Preventiva e Social',
+  ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +42,7 @@ export const ConfiguracoesView: React.FC<ConfiguracoesViewProps> = ({
       targetYearTimeline: timeline,
       targetInstitutions: instArray.length > 0 ? instArray : preferences.targetInstitutions,
       cycle,
+      focoModulo: focoModulo || undefined,
     });
     setSavedToast(true);
     setTimeout(() => setSavedToast(false), 3000);
@@ -133,6 +143,25 @@ export const ConfiguracoesView: React.FC<ConfiguracoesViewProps> = ({
             onChange={(e) => setCycle(e.target.value)}
             className="w-full h-9 px-3 bg-surface-container-low rounded-xl border border-surface-container text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
+        </div>
+
+        <div>
+          <label className="block text-secondary font-semibold mb-1">Módulo de foco inicial</label>
+          <select
+            value={focoModulo}
+            onChange={(e) => setFocoModulo(e.target.value)}
+            className="w-full h-9 px-3 bg-surface-container-low rounded-xl border border-surface-container text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="">Nenhum (deixar o algoritmo equilibrar)</option>
+            {MODULOS.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+          <span className="text-[0.6875rem] text-secondary mt-1 block">
+            Dá prioridade alta a esse módulo no começo (sem travar os outros). Útil
+            enquanto o algoritmo ainda não tem dados seus. Deixe "Nenhum" quando quiser
+            que ele distribua sozinho.
+          </span>
         </div>
 
         <div className="pt-3 border-t border-surface-container flex justify-end">
