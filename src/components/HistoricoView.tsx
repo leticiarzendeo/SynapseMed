@@ -14,6 +14,8 @@ interface HistoricoViewProps {
   evidenceLog?: EvidenceRecord[];
   oslerBlocks?: OslerBlockRecord[];
   curriculum?: AreaItem[];
+  /** Desfaz o registro: devolve o conteúdo ao cronograma (como não feito). */
+  onUndoContent?: (contentId: string) => void;
 }
 
 type TipoFiltro = 'todos' | 'teoria' | 'questoes' | 'revisao';
@@ -40,6 +42,7 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
   evidenceLog = [],
   oslerBlocks = [],
   curriculum,
+  onUndoContent,
 }) => {
   const hierarchy = curriculum ?? fullCurriculumHierarchy;
   const [filtro, setFiltro] = useState<TipoFiltro>('todos');
@@ -227,6 +230,24 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
                           {it.minutes > 0 ? ` · ${it.minutes} min` : ''}
                         </div>
                       </div>
+                      {onUndoContent && (
+                        <button
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `Devolver "${it.contentName}" para o cronograma? O registro será desfeito e a atividade volta para ser feita do zero.`
+                              )
+                            ) {
+                              onUndoContent(it.contentId);
+                            }
+                          }}
+                          title="Voltar para o Hoje (desfazer registro)"
+                          className="shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-secondary hover:text-on-surface border border-surface-container hover:bg-surface-container flex items-center gap-1"
+                        >
+                          <span className="material-symbols-outlined text-sm">undo</span>
+                          <span className="hidden sm:inline">Voltar p/ Hoje</span>
+                        </button>
+                      )}
                     </div>
                   );
                 })}

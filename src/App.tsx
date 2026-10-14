@@ -179,6 +179,21 @@ export default function App() {
     );
   };
 
+  // "Voltar para o Hoje": desfaz o registro de um conteúdo — remove suas
+  // evidências, blocos Osler e a marca de estudado, para ele voltar ao
+  // cronograma como não iniciado (como se não tivesse sido feito).
+  const handleUndoContent = (contentId: string) => {
+    if (!contentId) return;
+    setEvidenceLog((prev) => prev.filter((e) => e.contentId !== contentId));
+    setOslerBlocks((prev) => prev.filter((b) => b.contentId !== contentId));
+    setManualStudiedContentIds((prev) => prev.filter((id) => id !== contentId));
+    setActivities((prev) =>
+      prev.map((a) =>
+        a.contentId === contentId ? { ...a, completed: false, completedAt: undefined } : a
+      )
+    );
+  };
+
   // Registro manual de prova/simulado: adiciona uma evidência avulsa e,
   // se for erro, também marca o conteúdo como estudado (a questão prova contato).
   const handleAddEvidence = (record: EvidenceRecord) => {
@@ -563,6 +578,7 @@ export default function App() {
               evidenceLog={evidenceLog}
               oslerBlocks={oslerBlocks}
               curriculum={studiedCurriculum}
+              onUndoContent={handleUndoContent}
             />
           )}
 
