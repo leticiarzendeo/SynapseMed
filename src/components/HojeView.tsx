@@ -763,15 +763,6 @@ export const HojeView: React.FC<HojeViewProps> = ({
                 </button>
 
                 <button
-                  onClick={() => handleCompleteDirect(act)}
-                  className="px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition-all flex items-center gap-1 shadow-xs"
-                  title="Marcar como concluída"
-                >
-                  <span>✓</span>
-                  <span>Concluir</span>
-                </button>
-
-                <button
                   onClick={() => setShowUnfinishedModal(act)}
                   className="p-2 rounded-lg text-secondary hover:bg-surface-container text-xs"
                   title="Opções de adiamento/reprogramação"
@@ -996,20 +987,9 @@ export const HojeView: React.FC<HojeViewProps> = ({
                   setSelectedWhyActivity(null);
                   handleStartSession(act);
                 }}
-                className="py-2.5 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary-container transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                className="col-span-2 py-2.5 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary-container transition-all flex items-center justify-center gap-1.5 shadow-sm"
               >
                 <span>▶ Iniciar agora</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  const act = selectedWhyActivity;
-                  setSelectedWhyActivity(null);
-                  handleCompleteDirect(act);
-                }}
-                className="py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-all flex items-center justify-center gap-1.5 shadow-sm"
-              >
-                <span>✓ Concluir</span>
               </button>
 
               <button
