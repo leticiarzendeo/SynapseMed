@@ -146,8 +146,8 @@ export const HojeView: React.FC<HojeViewProps> = ({
 
   // Plano de hoje gerado pelo motor real, a partir do currículo + tempo + prazo.
   const recommendedPlan = React.useMemo(
-    () => planToActivities(buildTodayPlan(curriculum ?? [], availableTodayMin, 2, oslerBlocks, pace.paceFactor)),
-    [curriculum, availableTodayMin, oslerBlocks, pace.paceFactor]
+    () => planToActivities(buildTodayPlan(curriculum ?? [], availableTodayMin, 2, oslerBlocks, pace.paceFactor, preferences.focoModulo)),
+    [curriculum, availableTodayMin, oslerBlocks, pace.paceFactor, preferences.focoModulo]
   );
 
   // Activities for Today (derivadas do plano real; recomputam se o tempo muda).
