@@ -117,10 +117,15 @@ function recommendActivity(p: {
 }
 
 /** Calcula a prioridade de UM conteúdo. */
+// Bônus de "módulo foco" (ex.: começar por G.O.): empurra sem travar os outros.
+// Peso moderado: no plano do dia (que espalha módulos) o foco domina sem zerar
+// a variedade; os outros módulos continuam aparecendo.
+const W_FOCO = 8;
+
 export function calculateContentPriority(
   content: ContentItem,
   moduleName: string,
-  opts?: { revisao?: number; progresso?: number; prazo?: number; oportunidade?: number }
+  opts?: { revisao?: number; progresso?: number; prazo?: number; oportunidade?: number; focoBonus?: number }
 ): ContentPriority {
   const d = calculateContentDomain(content);
   const state = getContentState(content);
@@ -137,12 +142,14 @@ export function calculateContentPriority(
   // progresso curricular: conteúdo não iniciado empurra; iniciado empurra menos
   const progresso = opts?.progresso ?? (state === 'nao_iniciado' ? 1 : 0);
 
+  const focoBonus = opts?.focoBonus ?? 0; // 0..1 (1 = módulo foco)
   const priorityScore = Math.round(
     (nucleo * W_NUCLEO +
       revisao * W_REVISAO +
       progresso * W_PROGRESSO +
       prazo * W_PRAZO +
-      oportunidade * W_OPORTUNIDADE) * 10
+      oportunidade * W_OPORTUNIDADE +
+      focoBonus * W_FOCO) * 10
   ) / 10;
 
   const act = recommendActivity({
@@ -176,7 +183,8 @@ export function calculateContentPriority(
 export function rankContentsByPriority(
   hierarchy: readonly AreaItem[],
   oslerBlocks: readonly OslerBlockRecord[] = [],
-  paceFactor = 0
+  paceFactor = 0,
+  focoModulo?: string
 ): ContentPriority[] {
   // agrupa blocos por conteúdo para calcular necessidade de revisão
   const blocksByContent = new Map<string, OslerBlockRecord[]>();
@@ -193,7 +201,8 @@ export function rankContentsByPriority(
         // prazo empurra especialmente o AVANÇO curricular (conteúdo não iniciado)
         const st = getContentState(c);
         const prazo = st === 'nao_iniciado' ? paceFactor : paceFactor * 0.3;
-        out.push(calculateContentPriority(c, mod.name, { revisao, prazo }));
+        const focoBonus = focoModulo && mod.name === focoModulo ? 1 : 0;
+        out.push(calculateContentPriority(c, mod.name, { revisao, prazo, focoBonus }));
       }
   out.sort((a, b) => b.priorityScore - a.priorityScore);
   return out;
@@ -287,9 +296,10 @@ export function buildTodayPlan(
   availableMinutes: number,
   maxActivities = 2,
   oslerBlocks: readonly OslerBlockRecord[] = [],
-  paceFactor = 0
+  paceFactor = 0,
+  focoModulo?: string
 ): ContentPriority[] {
-  const ranked = rankContentsByPriority(hierarchy, oslerBlocks, paceFactor).filter((c) => c.priorityScore > 0);
+  const ranked = rankContentsByPriority(hierarchy, oslerBlocks, paceFactor, focoModulo).filter((c) => c.priorityScore > 0);
   const plan: ContentPriority[] = [];
   const usedModules = new Set<string>();
   let used = 0;
