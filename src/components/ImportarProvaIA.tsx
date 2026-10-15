@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { hojeBR } from '../utils/dateBR';
 import { AreaItem, EvidenceRecord, CadernoErroItem } from '../types';
 import { fullCurriculumHierarchy } from '../data/mockData';
 import {
@@ -49,7 +50,7 @@ export const ImportarProvaIA: React.FC<ImportarProvaIAProps> = ({
     setResult(parseAndResolveExamJson(jsonText, hierarchy));
   };
 
-  const today = () => new Date().toISOString().split('T')[0];
+  const today = () => hojeBR();
 
   const handleSave = () => {
     if (!result || !result.ok) return;
