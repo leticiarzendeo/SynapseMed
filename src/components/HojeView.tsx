@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { hojeBR } from '../utils/dateBR';
 import { UserPreferences, ErrorReasonType, ContentItem, AreaItem, OslerBlockRecord, DayCapacityConfig } from '../types';
 import { getContentState } from '../utils/contentState';
 import { buildTodayPlan, rankContentsByPriority, ContentPriority, ActivityKind } from '../utils/priorityEngine';
@@ -157,7 +158,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
 
   // 1º Osler pendente cuja data já chegou -> vira atividade de revisão no topo.
   const oslerPendingActivities: ActivityItem[] = React.useMemo(() => {
-    const hoje = new Date().toISOString().split('T')[0];
+    const hoje = hojeBR();
     const contents = (curriculum ?? []).flatMap((a) =>
       a.modules.flatMap((m) => m.contents.map((c) => ({ c, mod: m.name })))
     );
