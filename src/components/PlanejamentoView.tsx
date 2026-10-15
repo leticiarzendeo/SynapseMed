@@ -28,6 +28,8 @@ interface PlanejamentoViewProps {
   /** Disponibilidade da semana (fonte central no App, persistida). */
   weekDays?: DayCapacityConfig[];
   onChangeWeekDays?: (days: DayCapacityConfig[]) => void;
+  /** 1º Osler pendente por conteúdo (aparece na grade no dia agendado). */
+  oslerPending?: { contentId: string; dueDate: string }[];
 }
 
 export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
@@ -38,6 +40,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
   oslerBlocks = [],
   weekDays,
   onChangeWeekDays,
+  oslerPending = [],
 }) => {
   // Mode: 🤖 Recomendação do Algoritmo vs 👤 Seu Plano
   const [viewLayer, setViewLayer] = useState<'algoritmo' | 'usuario'>('usuario');
@@ -99,12 +102,45 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
     });
     const plan = buildWeeklyPlan(curriculum ?? [], weekdayCaps, oslerBlocks, pace.paceFactor);
     const acts: PlanningActivityItem[] = [];
+
+    // Osler pendentes: encaixa cada um no DIA DA SEMANA correspondente à sua
+    // data agendada (dueDate), se cair dentro desta semana (seg–sex).
+    const allContents = (curriculum ?? []).flatMap((a) =>
+      a.modules.flatMap((m) => m.contents.map((c) => ({ c, mod: m.name })))
+    );
+    const jsDayToKey = ['', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', '']; // 1=seg..5=sex
+    for (const p of oslerPending) {
+      const due = new Date(p.dueDate + 'T12:00:00');
+      const dow = due.getDay();
+      // Fim de semana (0=domingo, 6=sábado) desliza para a SEGUNDA seguinte.
+      const key = dow === 0 || dow === 6 ? 'segunda' : jsDayToKey[dow];
+      if (!key || !DAY_KEYS.includes(key)) continue;
+      const found = allContents.find((x) => x.c.id === p.contentId);
+      acts.push({
+        id: `osler-pend-${p.contentId}`,
+        contentId: p.contentId,
+        name: found?.c.name || 'Conteúdo',
+        subType: 'Revisão / Osler (1ª vez)',
+        type: 'estudo' as any,
+        category: 'manutencao',
+        durationMin: 30,
+        priorityScore: 90,
+        efficiencyPointsPerMin: 3,
+        specialty: found?.mod || '',
+        modulo: found?.mod || '',
+        recommendedDay: key,
+        currentDay: key,
+        status: 'pendente',
+        whyNow: 'Primeira revisão Osler, agendada ~2 dias após a teoria.',
+      });
+    }
+
     for (const day of plan) {
       for (const cp of day.activities) acts.push(cpToPlanning(cp, day.key));
     }
     return acts;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [curriculum, oslerBlocks, pace.paceFactor, days]);
+  }, [curriculum, oslerBlocks, pace.paceFactor, days, oslerPending]);
 
   const [activities, setActivities] = useState<PlanningActivityItem[]>(recommendedWeek);
   React.useEffect(() => {
