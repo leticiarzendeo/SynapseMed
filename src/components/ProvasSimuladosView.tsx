@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { hojeBR } from '../utils/dateBR';
 import {
   fullCurriculumHierarchy,
 } from '../data/mockData';
@@ -253,7 +254,7 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
       isCorrected: true,
       questionErrorReasons,
       questions,
-      downloadedAt: new Date().toISOString().split('T')[0],
+      downloadedAt: hojeBR(),
     };
 
     setDownloadedExams((prev) => [newExam, ...prev]);
@@ -407,7 +408,7 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
           isCorrected: false,
           questionErrorReasons: {},
           questions: new100Questions,
-          downloadedAt: new Date().toISOString().split('T')[0],
+          downloadedAt: hojeBR(),
           auditReport: pendingAuditReport || undefined,
           confidenceStatus: confirmedData.isConfirmedForOfficialStats ? 'CONFIRMADO' : 'PRECISA_CONFIRMACAO',
           isConfirmedForOfficialStats: confirmedData.isConfirmedForOfficialStats,
@@ -489,7 +490,7 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
       isCorrected: false,
       questionErrorReasons: {},
       questions: new100Questions,
-      downloadedAt: new Date().toISOString().split('T')[0],
+      downloadedAt: hojeBR(),
     };
 
     setDownloadedExams((prev) => [newExam, ...prev]);
@@ -658,7 +659,7 @@ export const ProvasSimuladosView: React.FC<ProvasSimuladosViewProps> = ({
       return;
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = hojeBR();
     const source = `${exam.institution} ${exam.year}`.trim();
     let evid = 0;
     let erros = 0;
