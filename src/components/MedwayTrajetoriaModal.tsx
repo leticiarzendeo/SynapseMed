@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { hojeBR } from '../utils/dateBR';
 import { ContentItem, QuestionAssessment } from '../types';
 
 interface MedwayTrajetoriaModalProps {
@@ -16,7 +17,7 @@ export const MedwayTrajetoriaModal: React.FC<MedwayTrajetoriaModalProps> = ({
   const [newTotalQuestions, setNewTotalQuestions] = useState(20);
   const [newCorrectCount, setNewCorrectCount] = useState(17);
   const [newLabel, setNewLabel] = useState('Reavaliação no Banco Medway');
-  const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
+  const [newDate, setNewDate] = useState(hojeBR());
 
   const newAccuracy = newTotalQuestions > 0 ? (newCorrectCount / newTotalQuestions) * 100 : 0;
   const preAccuracy = content.preVideoQuestions?.accuracy || 0;
