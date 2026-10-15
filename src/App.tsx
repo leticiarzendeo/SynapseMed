@@ -133,6 +133,21 @@ export default function App() {
     return [];
   });
 
+  // 1º Osler pendente por conteúdo: {contentId, dueDate}. Criado ao concluir a
+  // teoria; quando a data chega, vira atividade de revisão no plano da aba Hoje.
+  const [oslerPending, setOslerPending] = useState<{ contentId: string; dueDate: string }[]>(() => {
+    const saved = localStorage.getItem('synapsemed_osler_pending');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
   const [coordinatingActivity, setCoordinatingActivity] = useState<StudyActivity | null>(null);
   const [showRegistrarModal, setShowRegistrarModal] = useState(false);
   const [showAjustarMetasModal, setShowAjustarMetasModal] = useState(false);
@@ -166,6 +181,10 @@ export default function App() {
   }, [oslerBlocks]);
 
   useEffect(() => {
+    localStorage.setItem('synapsemed_osler_pending', JSON.stringify(oslerPending));
+  }, [oslerPending]);
+
+  useEffect(() => {
     localStorage.setItem('synapsemed_week_days', JSON.stringify(weekDays));
   }, [weekDays]);
 
@@ -186,6 +205,7 @@ export default function App() {
     if (!contentId) return;
     setEvidenceLog((prev) => prev.filter((e) => e.contentId !== contentId));
     setOslerBlocks((prev) => prev.filter((b) => b.contentId !== contentId));
+    setOslerPending((prev) => prev.filter((p) => p.contentId !== contentId));
     setManualStudiedContentIds((prev) => prev.filter((id) => id !== contentId));
     setActivities((prev) =>
       prev.map((a) =>
@@ -236,6 +256,18 @@ export default function App() {
     }
     if (records.length) setEvidenceLog((prev) => [...records, ...prev]);
     if (input.theoryCompleted || records.length) handleContentStudied(input.contentId);
+
+    // Ponte: ao concluir a teoria, agenda o 1º Osler para ~2 dias depois (bom
+    // para a memória). Só cria se ainda não há bloco Osler nem pendência.
+    if (input.theoryCompleted) {
+      const jaTemBloco = oslerBlocks.some((b) => b.contentId === input.contentId);
+      setOslerPending((prev) => {
+        if (jaTemBloco || prev.some((p) => p.contentId === input.contentId)) return prev;
+        const due = new Date();
+        due.setDate(due.getDate() + 2);
+        return [...prev, { contentId: input.contentId, dueDate: due.toISOString().split('T')[0] }];
+      });
+    }
   };
 
   // Salva/atualiza um bloco Osler informado pela usuária (retenção/memória).
@@ -255,6 +287,8 @@ export default function App() {
     });
     // marca o conteúdo como estudado (houve contato de memória real)
     if (input.contentId) handleContentStudied(input.contentId);
+    // Osler informado: sai da lista de pendentes (o ciclo de revisão assume).
+    setOslerPending((prev) => prev.filter((p) => p.contentId !== input.contentId));
   };
 
   // ============================================================
@@ -411,6 +445,7 @@ export default function App() {
       localStorage.removeItem('synapsemed_manual_studied');
       localStorage.removeItem('synapsemed_evidence_log');
       localStorage.removeItem('synapsemed_osler_blocks');
+      localStorage.removeItem('synapsemed_osler_pending');
       localStorage.removeItem('synapsemed_week_days');
       localStorage.removeItem('synapsemed_weekly_completed_minutes');
       localStorage.setItem('synapsemed_storage_version', CURRENT_STORAGE_VERSION);
@@ -421,6 +456,7 @@ export default function App() {
     setManualStudiedContentIds([]);
     setEvidenceLog([]);
     setOslerBlocks([]);
+    setOslerPending([]);
     setWeekDays(DEFAULT_WEEK_DAYS);
     setCurrentPath('hoje');
     showToast('Ambiente restaurado para o início dos estudos (0% concluído).');
@@ -512,6 +548,8 @@ export default function App() {
               onNavigateToCurriculo={() => setCurrentPath('curriculo')}
               onContentStudied={handleContentStudied}
               onRecordTheory={handleRecordTheory}
+              oslerPending={oslerPending}
+              onNavigateToRevisoes={() => setCurrentPath('revisoes')}
               onNavigate={setCurrentPath}
               curriculum={studiedCurriculum}
               oslerBlocks={oslerBlocks}

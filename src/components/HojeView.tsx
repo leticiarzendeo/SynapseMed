@@ -64,6 +64,9 @@ interface HojeViewProps {
   }) => void;
   /** Navegar para outra aba (ex.: levar questões/revisão à aba certa). */
   onNavigate?: (path: any) => void;
+  /** 1º Osler pendente por conteúdo (criado ao concluir teoria). */
+  oslerPending?: { contentId: string; dueDate: string }[];
+  onNavigateToRevisoes?: () => void;
 }
 
 export const HojeView: React.FC<HojeViewProps> = ({
@@ -76,6 +79,8 @@ export const HojeView: React.FC<HojeViewProps> = ({
   weekDays,
   onRecordTheory,
   onNavigate,
+  oslerPending = [],
+  onNavigateToRevisoes,
 }) => {
   // Fatia de hoje sugerida a partir da semana: capacidade do dia de hoje, ou
   // média dos dias com capacidade > 0 (dias de descanso não entram).
@@ -150,12 +155,42 @@ export const HojeView: React.FC<HojeViewProps> = ({
     [curriculum, availableTodayMin, oslerBlocks, pace.paceFactor, preferences.focoModulo]
   );
 
-  // Activities for Today (derivadas do plano real; recomputam se o tempo muda).
-  const [activities, setActivities] = useState<ActivityItem[]>(recommendedPlan);
+  // 1º Osler pendente cuja data já chegou -> vira atividade de revisão no topo.
+  const oslerPendingActivities: ActivityItem[] = React.useMemo(() => {
+    const hoje = new Date().toISOString().split('T')[0];
+    const contents = (curriculum ?? []).flatMap((a) =>
+      a.modules.flatMap((m) => m.contents.map((c) => ({ c, mod: m.name })))
+    );
+    return oslerPending
+      .filter((p) => p.dueDate <= hoje)
+      .map((p) => {
+        const found = contents.find((x) => x.c.id === p.contentId);
+        return {
+          id: `osler-pend-${p.contentId}`,
+          contentId: p.contentId,
+          name: found?.c.name || 'Conteúdo',
+          subType: 'Revisão / Osler',
+          durationMin: 30,
+          specialty: found?.mod || '',
+          modulo: found?.mod || '',
+          priority: 'alta' as const,
+          priorityScore: 90,
+          whyNow: 'Primeira revisão Osler, agendada após a teoria. Fortalece a memória.',
+          whyDetails: {
+            incidence: '', examScore: '', domainScore: '', targetScore: '',
+            fsrsStatus: 'Primeira revisão (pós-teoria)', postExercisesCompleted: '',
+          },
+          recommendedDay: 'hoje', currentDay: 'hoje',
+        };
+      });
+  }, [oslerPending, curriculum]);
+
+  // Activities for Today: oslers pendentes (no topo) + plano recomendado.
+  const [activities, setActivities] = useState<ActivityItem[]>([...oslerPendingActivities, ...recommendedPlan]);
   useEffect(() => {
-    setActivities(recommendedPlan);
+    setActivities([...oslerPendingActivities, ...recommendedPlan]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recommendedPlan]);
+  }, [recommendedPlan, oslerPendingActivities]);
 
   // Registro de Autonomia: histórico de alterações manuais da recomendação
   const [userOverrides, setUserOverrides] = useState<UserOverrideRecord[]>([]);
