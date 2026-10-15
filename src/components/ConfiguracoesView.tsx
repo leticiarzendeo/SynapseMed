@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { UserPreferences } from '../types';
+import { ContaSection } from './ContaSection';
 
 interface ConfiguracoesViewProps {
   preferences: UserPreferences;
@@ -173,6 +174,8 @@ export const ConfiguracoesView: React.FC<ConfiguracoesViewProps> = ({
           </button>
         </div>
       </form>
+
+      <ContaSection />
 
       {/* Ambiente de Teste e Reset */}
       <div className="bg-surface-container-lowest rounded-2xl p-6 border border-surface-container shadow-sm max-w-2xl text-xs space-y-3">
