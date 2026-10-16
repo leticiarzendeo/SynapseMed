@@ -359,7 +359,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
     // Constrói o registro de autonomia com os 3 impactos calculados
     const overrideRecord: UserOverrideRecord = {
       id: `override-${Date.now()}`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }),
       originalActivity: original,
       chosenActivity: newActivity,
       weeklyPlanImpact: `A atividade de ${original.name} (${original.durationMin} min) sob as bancas USP/UNIFESP foi postergada para quarta-feira, mantendo a cota de ${preferences.weeklyHoursTarget}h da semana perfeitamente equilibrada.`,

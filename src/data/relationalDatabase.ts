@@ -1,3 +1,4 @@
+import { hojeBR } from '../utils/dateBR';
 import {
   ActivityEntity,
   ActivityStatusEnum,
@@ -938,7 +939,7 @@ export class SynapseRelationalDatabase {
       applicationScore,
       retentionScore,
       confidenceScore,
-      date: new Date().toISOString().split('T')[0],
+      date: hojeBR(),
     });
 
     return updated;
@@ -1050,7 +1051,7 @@ export class SynapseRelationalDatabase {
       id: `q-att-${Date.now()}`,
       userId: params.userId,
       questionId: params.questionId,
-      date: new Date().toISOString().split('T')[0],
+      date: hojeBR(),
       correct: params.correct,
       errorReason: params.errorReason,
       otherDescription: params.otherDescription,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { hojeBR } from './utils/dateBR';
+import { hojeBR, somarDiasBR } from './utils/dateBR';
 import { ViewPath, StudyActivity, UserPreferences, SessionCompletionReport, CadernoErroItem, EvidenceRecord, OslerBlockRecord } from './types';
 import { upsertBlockRecord } from './utils/retentionEngine';
 import { DEFAULT_WEEK_DAYS } from './utils/planningEngine';
@@ -264,9 +264,7 @@ export default function App() {
       const jaTemBloco = oslerBlocks.some((b) => b.contentId === input.contentId);
       setOslerPending((prev) => {
         if (jaTemBloco || prev.some((p) => p.contentId === input.contentId)) return prev;
-        const due = new Date();
-        due.setDate(due.getDate() + 2);
-        return [...prev, { contentId: input.contentId, dueDate: due.toISOString().split('T')[0] }];
+        return [...prev, { contentId: input.contentId, dueDate: somarDiasBR(hojeBR(), 2) }];
       });
     }
   };
