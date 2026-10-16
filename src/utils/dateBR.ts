@@ -41,3 +41,23 @@ export function horaBR(): number {
     })
   );
 }
+
+const DIAS_SEMANA = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
+const MESES_ABREV = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+
+/** Segunda-feira (YYYY-MM-DD) da semana de uma data, em Brasília. */
+export function segundaDaSemanaBR(dataISO: string = hojeBR()): string {
+  const dow = new Date(`${dataISO}T12:00:00Z`).getUTCDay(); // 0=dom..6=sáb
+  return somarDiasBR(dataISO, dow === 0 ? -6 : 1 - dow);
+}
+
+/**
+ * Data (ex.: "07 SET") do dia da semana na semana atual de Brasília.
+ * `chave` é 'segunda' | 'terca' | ... | 'domingo' (mesmas chaves de DayCapacityConfig).
+ */
+export function dataDiaSemanaBR(chave: string, hoje: string = hojeBR()): string {
+  const idx = DIAS_SEMANA.indexOf(chave);
+  if (idx < 0) return '';
+  const [, mes, dia] = somarDiasBR(segundaDaSemanaBR(hoje), idx).split('-');
+  return `${dia} ${MESES_ABREV[Number(mes) - 1]}`;
+}

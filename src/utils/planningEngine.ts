@@ -25,6 +25,8 @@ import {
 // ==========================================
 // 1. CAPACIDADE DIÁRIA PADRÃO (TOTAL = 8h00)
 // ==========================================
+// O campo `date` abaixo é só legado: a tela calcula a data real da semana
+// com dataDiaSemanaBR() (utils/dateBR), ignorando o valor salvo.
 export const DEFAULT_WEEK_DAYS: DayCapacityConfig[] = [
   { key: 'segunda', label: 'SEGUNDA', date: '07 SET', capacityMin: 80, plannedStr: '1h20', status: 'nao_iniciado', suggestedProfile: 'misto' },
   { key: 'terca', label: 'TERÇA', date: '08 SET', capacityMin: 100, plannedStr: '1h40', status: 'nao_iniciado', suggestedProfile: 'atividades_longas' },

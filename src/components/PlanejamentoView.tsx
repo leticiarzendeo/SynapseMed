@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { dataDiaSemanaBR, segundaDaSemanaBR, somarDiasBR } from '../utils/dateBR';
+
 import {
   UserPreferences,
   WeekPresetType,
@@ -18,6 +20,9 @@ import {
 } from '../utils/planningEngine';
 import { buildWeeklyPlan, ContentPriority } from '../utils/priorityEngine';
 import { computePace } from '../utils/paceEngine';
+
+// DD/MM a partir de YYYY-MM-DD.
+const ddmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
 interface PlanejamentoViewProps {
   preferences: UserPreferences;
@@ -330,8 +335,9 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
       currentDay: 'segunda',
       isMovedByUser: true,
       status: 'pendente',
-      idealDate: '14/09',
-      deadlineDate: '20/09',
+      // Próxima semana (segunda a domingo), em Brasília.
+      idealDate: ddmm(somarDiasBR(segundaDaSemanaBR(), 7)),
+      deadlineDate: ddmm(somarDiasBR(segundaDaSemanaBR(), 13)),
       whyNow: 'Antecipação voluntária: remove a atividade da semana que vem e gera folga na margem dos 2 anos.',
       impactNotice: '🟢 Conteúdo adiantado! A semana que vem ganhou margem e a próxima prioridade foi puxada.',
     };
@@ -583,7 +589,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                   }`}
                 >
                   <span className="text-[0.6875rem] font-bold text-secondary block">{day.label}</span>
-                  <span className="text-[0.625rem] text-secondary/80 block">{day.date}</span>
+                  <span className="text-[0.625rem] text-secondary/80 block">{dataDiaSemanaBR(day.key)}</span>
                   <span className="font-code-metric font-extrabold text-on-surface text-sm block mt-1">
                     {day.plannedStr}
                   </span>
@@ -828,7 +834,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                       <div>
                         <div className="flex items-center gap-1.5">
                           <span className="font-extrabold text-sm text-on-surface">{day.label}</span>
-                          <span className="text-xs text-secondary font-medium">({day.date})</span>
+                          <span className="text-xs text-secondary font-medium">({dataDiaSemanaBR(day.key)})</span>
                           {day.key === 'segunda' && (
                             <span className="text-[0.625rem] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
                               Hoje
@@ -1466,7 +1472,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                 >
                   <div>
                     <strong className="block text-on-surface">{d.label}</strong>
-                    <span className="text-[0.6875rem] text-secondary">{d.date}</span>
+                    <span className="text-[0.6875rem] text-secondary">{dataDiaSemanaBR(d.key)}</span>
                   </div>
 
                   <div className="flex items-center gap-2">

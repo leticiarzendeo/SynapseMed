@@ -904,7 +904,7 @@ export interface PlanningActivityItem {
 export interface DayCapacityConfig {
   key: string;            // 'segunda', 'terca', etc.
   label: string;          // 'SEGUNDA'
-  date: string;           // '07 SET'
+  date: string;           // legado; exibição usa dataDiaSemanaBR(key)
   capacityMin: number;    // ex: 80 (1h20)
   plannedStr: string;     // '1h20'
   status: 'completo' | 'parcial' | 'nao_iniciado' | 'descanso';
