@@ -3,7 +3,8 @@ import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { startCloudSync, stopCloudSync } from '../lib/cloudSync';
 
 type Status = 'loading' | 'signedOut' | 'syncing' | 'ready' | 'error';
-type Mode = 'signIn' | 'signUp' | 'magicLink';
+// Sem cadastro: o acesso é restrito à conta já existente (ver supabase/schema.sql).
+type Mode = 'signIn' | 'magicLink';
 
 // Exige login (quando o Supabase está configurado) e só monta o App depois
 // de baixar os dados do usuário da nuvem para o localStorage.
@@ -120,17 +121,6 @@ const LoginScreen: React.FC = () => {
       if (mode === 'signIn') {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-      } else if (mode === 'signUp') {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: window.location.origin },
-        });
-        if (error) throw error;
-        if (!data.session) {
-          setInfo('Conta criada! Confirme pelo link enviado ao seu e-mail e depois entre.');
-          setMode('signIn');
-        }
       } else {
         const { error } = await supabase.auth.signInWithOtp({
           email,
@@ -157,9 +147,9 @@ const LoginScreen: React.FC = () => {
           <span className="font-bold text-sm">SynapseMed</span>
         </div>
         <h1 className="text-lg font-bold text-on-surface mt-2">
-          {mode === 'signUp' ? 'Criar conta' : mode === 'magicLink' ? 'Entrar com link por e-mail' : 'Entrar'}
+          {mode === 'magicLink' ? 'Entrar com link por e-mail' : 'Entrar'}
         </h1>
-        <p className="text-secondary text-xs mt-1">Seu progresso fica salvo na nuvem e aparece em qualquer dispositivo.</p>
+        <p className="text-secondary text-xs mt-1">Acesso restrito. Seu progresso fica salvo na nuvem.</p>
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-3 text-xs">
           <div>
@@ -180,7 +170,7 @@ const LoginScreen: React.FC = () => {
                 type="password"
                 required
                 minLength={6}
-                autoComplete={mode === 'signUp' ? 'new-password' : 'current-password'}
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className={inputClass}
@@ -196,19 +186,14 @@ const LoginScreen: React.FC = () => {
             disabled={busy}
             className="w-full h-10 rounded-xl bg-primary text-on-primary font-bold hover:bg-primary-container transition-all disabled:opacity-60"
           >
-            {busy ? 'Aguarde…' : mode === 'signUp' ? 'Criar conta' : mode === 'magicLink' ? 'Enviar link' : 'Entrar'}
+            {busy ? 'Aguarde…' : mode === 'magicLink' ? 'Enviar link' : 'Entrar'}
           </button>
         </form>
 
         <div className="mt-4 flex flex-col gap-1.5 text-xs text-center">
           {mode !== 'signIn' && (
             <button className="text-primary font-semibold" onClick={() => setMode('signIn')}>
-              Já tenho conta: entrar com senha
-            </button>
-          )}
-          {mode !== 'signUp' && (
-            <button className="text-primary font-semibold" onClick={() => setMode('signUp')}>
-              Criar uma conta
+              Entrar com senha
             </button>
           )}
           {mode !== 'magicLink' && (
