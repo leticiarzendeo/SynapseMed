@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { dataDiaSemanaBR, segundaDaSemanaBR, somarDiasBR } from '../utils/dateBR';
+import {
+  DIAS_SEMANA,
+  chaveDiaSemanaBR,
+  dataDiaSemanaBR,
+  hojeBR,
+  segundaDaSemanaBR,
+  somarDiasBR,
+} from '../utils/dateBR';
 
 import {
   UserPreferences,
@@ -76,21 +83,24 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
   };
   const DAY_KEYS = ['segunda', 'terca', 'quarta', 'quinta', 'sexta'];
 
-  // Semana atual (segunda a domingo), na data real de Brasília.
-  const semanaLabel = React.useMemo(() => {
-    const agora = new Date(
-      new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })
-    );
-    const dow = agora.getDay(); // 0=dom..6=sáb
-    const diffParaSegunda = dow === 0 ? -6 : 1 - dow; // volta até a segunda
-    const seg = new Date(agora);
-    seg.setDate(agora.getDate() + diffParaSegunda);
-    const dom = new Date(seg);
-    dom.setDate(seg.getDate() + 6);
-    const fmt = (d: Date) =>
-      d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '');
-    return `Semana de ${fmt(seg)} a ${fmt(dom)}`;
-  }, []);
+  // Semana de referência do cronograma, pela data real de Brasília.
+  // Seg–sex: a semana atual (dias que já passaram não recebem atividades).
+  // Sáb/dom: a semana útil acabou, então o cronograma mostra a PRÓXIMA semana.
+  const hojeISO = hojeBR();
+  const hojeKey = chaveDiaSemanaBR(hojeISO);
+  const fimDeSemana = hojeKey === 'sabado' || hojeKey === 'domingo';
+  const segundaRef = fimDeSemana ? somarDiasBR(segundaDaSemanaBR(hojeISO), 7) : segundaDaSemanaBR(hojeISO);
+  const sextaRef = somarDiasBR(segundaRef, 4);
+  const inicioPlano = fimDeSemana ? segundaRef : hojeISO; // 1º dia que ainda recebe atividades
+  const isHoje = (key: string) => !fimDeSemana && key === hojeKey;
+  const diaPassou = (key: string) =>
+    !fimDeSemana && DIAS_SEMANA.indexOf(key) < DIAS_SEMANA.indexOf(hojeKey);
+  const dataDoDia = (key: string) => dataDiaSemanaBR(key, segundaRef);
+  const semanaLabel = `${fimDeSemana ? 'Próxima semana' : 'Semana'}: ${dataDoDia('segunda')} a ${dataDoDia('domingo')}`;
+  const NOMES_DIA: Record<string, string> = {
+    segunda: 'Segunda', terca: 'Terça', quarta: 'Quarta', quinta: 'Quinta',
+    sexta: 'Sexta', sabado: 'Sábado', domingo: 'Domingo',
+  };
 
   const cpToPlanning = (cp: ContentPriority, dayKey: string): PlanningActivityItem => {
     const m = ACT_MAP[cp.recommendedActivity] ?? ACT_MAP.avanco;
@@ -119,23 +129,25 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
   const recommendedWeek = React.useMemo(() => {
     const weekdayCaps = DAY_KEYS.map((k) => {
       const d = days.find((x) => x.key === k);
-      return { key: k, label: k.toUpperCase(), capacityMin: d?.capacityMin ?? 96 };
+      // Dia que já passou nesta semana não recebe atividade nova.
+      const cap = diaPassou(k) ? 0 : d?.capacityMin ?? 96;
+      return { key: k, label: k.toUpperCase(), capacityMin: cap };
     });
     const plan = buildWeeklyPlan(curriculum ?? [], weekdayCaps, oslerBlocks, pace.paceFactor);
     const acts: PlanningActivityItem[] = [];
 
-    // Osler pendentes: encaixa cada um no DIA DA SEMANA correspondente à sua
-    // data agendada (dueDate), se cair dentro desta semana (seg–sex).
+    // Osler pendentes: encaixa cada um no dia da semana da sua data agendada
+    // (dueDate), só se cair dentro da semana de referência (seg–sex).
     const allContents = (curriculum ?? []).flatMap((a) =>
       a.modules.flatMap((m) => m.contents.map((c) => ({ c, mod: m.name })))
     );
-    const jsDayToKey = ['', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', '']; // 1=seg..5=sex
     for (const p of oslerPending) {
-      const due = new Date(p.dueDate + 'T12:00:00');
-      const dow = due.getDay();
-      // Fim de semana (0=domingo, 6=sábado) desliza para a SEGUNDA seguinte.
-      const key = dow === 0 || dow === 6 ? 'segunda' : jsDayToKey[dow];
-      if (!key || !DAY_KEYS.includes(key)) continue;
+      // Vencido vai para o 1º dia disponível (hoje); fim de semana desliza para a segunda seguinte.
+      let alvo = p.dueDate < inicioPlano ? inicioPlano : p.dueDate;
+      const k = chaveDiaSemanaBR(alvo);
+      if (k === 'sabado' || k === 'domingo') alvo = somarDiasBR(segundaDaSemanaBR(alvo), 7);
+      if (alvo < segundaRef || alvo > sextaRef) continue; // fora desta semana
+      const key = chaveDiaSemanaBR(alvo);
       const found = allContents.find((x) => x.c.id === p.contentId);
       acts.push({
         id: `osler-pend-${p.contentId}`,
@@ -161,7 +173,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
     }
     return acts;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [curriculum, oslerBlocks, pace.paceFactor, days, oslerPending]);
+  }, [curriculum, oslerBlocks, pace.paceFactor, days, oslerPending, hojeISO]);
 
   const [activities, setActivities] = useState<PlanningActivityItem[]>(recommendedWeek);
   React.useEffect(() => {
@@ -192,6 +204,18 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4500);
   };
+
+  // Relógio diário: dados do dia real (no fim de semana, o próprio sábado/domingo).
+  const fmtMin = (m: number) => `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`;
+  const capacidadeHojeMin = days.find((d) => d.key === hojeKey)?.capacityMin ?? 0;
+  const atividadesHoje = fimDeSemana ? [] : activities.filter((a) => a.currentDay === hojeKey);
+  const planejadoHojeMin = atividadesHoje.reduce((acc, a) => acc + a.durationMin, 0);
+  const concluidoHojeMin = atividadesHoje
+    .filter((a) => a.status === 'concluido')
+    .reduce((acc, a) => acc + a.durationMin, 0);
+  const progressoHojePct = planejadoHojeMin
+    ? Math.min(100, Math.round((concluidoHojeMin / planejadoHojeMin) * 100))
+    : 0;
 
   // Calculations
   const totalWeeklyCapacityHours = Number(
@@ -331,8 +355,8 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
       efficiencyPointsPerMin: Number((90 / duration).toFixed(2)),
       specialty: 'Clínica Médica',
       modulo,
-      recommendedDay: 'segunda',
-      currentDay: 'segunda',
+      recommendedDay: fimDeSemana ? 'segunda' : hojeKey,
+      currentDay: fimDeSemana ? 'segunda' : hojeKey,
       isMovedByUser: true,
       status: 'pendente',
       // Próxima semana (segunda a domingo), em Brasília.
@@ -414,19 +438,23 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                 <span>Relógio Diário</span>
               </span>
               <span className="text-[0.6875rem] font-bold px-2 py-0.5 rounded-md bg-primary/10 text-primary">
-                Hoje: Segunda
+                Hoje: {NOMES_DIA[hojeKey]} ({dataDiaSemanaBR(hojeKey, hojeISO)})
               </span>
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-black text-on-surface font-code-metric">1h20</span>
+              <span className="text-2xl font-black text-on-surface font-code-metric">{fmtMin(capacidadeHojeMin)}</span>
               <span className="text-xs text-secondary">disponível hoje</span>
             </div>
             <div className="w-full bg-surface-container rounded-full h-2 overflow-hidden">
-              <div className="bg-emerald-500 h-2 rounded-full" style={{ width: '62%' }}></div>
+              <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${progressoHojePct}%` }}></div>
             </div>
             <div className="flex justify-between text-[0.6875rem] text-secondary">
-              <span>Planejado: 1h20 (3 atividades)</span>
-              <span className="font-bold text-emerald-700">50 min concluídos</span>
+              <span>
+                {fimDeSemana
+                  ? 'Fim de semana: sem atividades do cronograma'
+                  : `Planejado: ${fmtMin(planejadoHojeMin)} (${atividadesHoje.length} ${atividadesHoje.length === 1 ? 'atividade' : 'atividades'})`}
+              </span>
+              <span className="font-bold text-emerald-700">{concluidoHojeMin} min concluídos</span>
             </div>
           </div>
 
@@ -583,13 +611,15 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                 <div
                   key={day.key}
                   className={`p-2.5 rounded-xl border text-center transition-all ${
-                    day.key === 'segunda'
+                    isHoje(day.key)
                       ? 'bg-primary/5 border-primary/40'
-                      : 'bg-surface-container-low/50 border-surface-container'
+                      : diaPassou(day.key)
+                        ? 'bg-surface-container-low/30 border-surface-container opacity-50'
+                        : 'bg-surface-container-low/50 border-surface-container'
                   }`}
                 >
                   <span className="text-[0.6875rem] font-bold text-secondary block">{day.label}</span>
-                  <span className="text-[0.625rem] text-secondary/80 block">{dataDiaSemanaBR(day.key)}</span>
+                  <span className="text-[0.625rem] text-secondary/80 block">{dataDoDia(day.key)}</span>
                   <span className="font-code-metric font-extrabold text-on-surface text-sm block mt-1">
                     {day.plannedStr}
                   </span>
@@ -823,9 +853,11 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                 <div
                   key={day.key}
                   className={`bg-surface-container-lowest rounded-3xl p-5 border transition-all shadow-xs space-y-3 flex flex-col justify-between ${
-                    day.key === 'segunda'
+                    isHoje(day.key)
                       ? 'border-primary/40 bg-primary/[0.01]'
-                      : 'border-surface-container'
+                      : diaPassou(day.key)
+                        ? 'border-surface-container opacity-60'
+                        : 'border-surface-container'
                   }`}
                 >
                   <div>
@@ -834,10 +866,15 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                       <div>
                         <div className="flex items-center gap-1.5">
                           <span className="font-extrabold text-sm text-on-surface">{day.label}</span>
-                          <span className="text-xs text-secondary font-medium">({dataDiaSemanaBR(day.key)})</span>
-                          {day.key === 'segunda' && (
+                          <span className="text-xs text-secondary font-medium">({dataDoDia(day.key)})</span>
+                          {isHoje(day.key) && (
                             <span className="text-[0.625rem] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
                               Hoje
+                            </span>
+                          )}
+                          {diaPassou(day.key) && (
+                            <span className="text-[0.625rem] font-bold px-1.5 py-0.5 rounded bg-surface-container text-secondary">
+                              Passou
                             </span>
                           )}
                         </div>
@@ -958,7 +995,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                                   onClick={() =>
                                     setSelectedDayToMove({
                                       activity: act,
-                                      targetDay: day.key === 'segunda' ? 'quinta' : 'segunda',
+                                      targetDay: DAY_KEYS.find((k) => k !== day.key && !diaPassou(k)) ?? day.key,
                                     })
                                   }
                                   className="text-[0.6875rem] text-primary hover:underline font-bold"
@@ -1472,7 +1509,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                 >
                   <div>
                     <strong className="block text-on-surface">{d.label}</strong>
-                    <span className="text-[0.6875rem] text-secondary">{dataDiaSemanaBR(d.key)}</span>
+                    <span className="text-[0.6875rem] text-secondary">{dataDoDia(d.key)}</span>
                   </div>
 
                   <div className="flex items-center gap-2">

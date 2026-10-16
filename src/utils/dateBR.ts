@@ -42,7 +42,7 @@ export function horaBR(): number {
   );
 }
 
-const DIAS_SEMANA = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
+export const DIAS_SEMANA = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
 const MESES_ABREV = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
 
 /** Segunda-feira (YYYY-MM-DD) da semana de uma data, em Brasília. */
@@ -60,4 +60,10 @@ export function dataDiaSemanaBR(chave: string, hoje: string = hojeBR()): string 
   if (idx < 0) return '';
   const [, mes, dia] = somarDiasBR(segundaDaSemanaBR(hoje), idx).split('-');
   return `${dia} ${MESES_ABREV[Number(mes) - 1]}`;
+}
+
+/** Chave do dia da semana ('segunda'..'domingo') de uma data YYYY-MM-DD (padrão: hoje em Brasília). */
+export function chaveDiaSemanaBR(dataISO: string = hojeBR()): string {
+  const dow = new Date(`${dataISO}T12:00:00Z`).getUTCDay(); // 0=dom..6=sáb
+  return DIAS_SEMANA[dow === 0 ? 6 : dow - 1];
 }
