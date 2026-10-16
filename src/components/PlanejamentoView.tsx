@@ -71,6 +71,22 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
   };
   const DAY_KEYS = ['segunda', 'terca', 'quarta', 'quinta', 'sexta'];
 
+  // Semana atual (segunda a domingo), na data real de Brasília.
+  const semanaLabel = React.useMemo(() => {
+    const agora = new Date(
+      new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })
+    );
+    const dow = agora.getDay(); // 0=dom..6=sáb
+    const diffParaSegunda = dow === 0 ? -6 : 1 - dow; // volta até a segunda
+    const seg = new Date(agora);
+    seg.setDate(agora.getDate() + diffParaSegunda);
+    const dom = new Date(seg);
+    dom.setDate(seg.getDate() + 6);
+    const fmt = (d: Date) =>
+      d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '');
+    return `Semana de ${fmt(seg)} a ${fmt(dom)}`;
+  }, []);
+
   const cpToPlanning = (cp: ContentPriority, dayKey: string): PlanningActivityItem => {
     const m = ACT_MAP[cp.recommendedActivity] ?? ACT_MAP.avanco;
     return {
@@ -416,7 +432,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                 <span>Relógio Semanal</span>
               </span>
               <span className="text-[0.6875rem] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800">
-                Semana de 07 a 13 Set
+                {semanaLabel}
               </span>
             </div>
             <div className="flex items-baseline gap-2">

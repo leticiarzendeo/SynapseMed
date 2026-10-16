@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { hojeBR } from '../utils/dateBR';
 import {
   fullCurriculumHierarchy,
   initialOslerBlocks,
@@ -426,7 +427,7 @@ export const CurriculoView: React.FC<CurriculoViewProps> = ({
           oslerBlockId: blockId,
           oslerBlockTitle: block ? block.title : blockId,
           relationType: 'associado',
-          createdAt: new Date().toISOString().split('T')[0],
+          createdAt: hojeBR(),
         };
       });
       const updated = [...filtered, ...newEntries];

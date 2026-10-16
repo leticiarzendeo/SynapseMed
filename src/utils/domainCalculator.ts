@@ -1,3 +1,4 @@
+import { hojeBR, diferencaDiasBR } from './dateBR';
 import {
   ContentItem,
   DomainCalculationBreakdown,
@@ -166,15 +167,13 @@ export function calculateContentDomain(content: ContentItem): DomainCalculationB
   }
 
   // Verificação temporal da estabilidade FSRS e vulnerabilidade ao esquecimento
-  // Data de referência do sistema: 2026-09-09
-  const SYSTEM_REFERENCE_DATE = new Date('2026-09-09T08:00:00Z');
+  // Data de referência: hoje no fuso de Brasília.
+  const hoje = hojeBR();
   let isReviewOverdue = false;
   let overdueDays = 0;
 
   if (content.fsrs?.nextReviewDate) {
-    const nextDate = new Date(content.fsrs.nextReviewDate + 'T00:00:00Z');
-    const diffTime = SYSTEM_REFERENCE_DATE.getTime() - nextDate.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 3600 * 24));
+    const diffDays = diferencaDiasBR(content.fsrs.nextReviewDate.slice(0, 10), hoje);
     if (diffDays > 0) {
       isReviewOverdue = true;
       overdueDays = diffDays;
@@ -577,7 +576,7 @@ function buildBrain2PrioritizationFromMetrics(params: {
   if (overdueDays > 0) {
     fsrsStatus = 'atrasada';
     fsrsStatusLabel = `🔴 Revisão atrasada há ${overdueDays} dia(s)`;
-  } else if (isReviewOverdue || overdueDays === 0 && content.fsrs?.nextReviewDate === '2026-09-09') {
+  } else if (isReviewOverdue || overdueDays === 0 && content.fsrs?.nextReviewDate?.slice(0, 10) === hojeBR()) {
     fsrsStatus = 'hoje';
     fsrsStatusLabel = '🟠 Revisão programada para hoje';
   } else if (retrievability < 80 || (content.fsrs?.stabilityDays && content.fsrs.stabilityDays <= 3)) {

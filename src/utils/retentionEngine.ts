@@ -18,6 +18,7 @@
 // ============================================================================
 
 import { OslerBlockRecord } from '../types';
+import { hojeBR, somarDiasBR, diferencaDiasBR } from './dateBR';
 
 // Pesos das categorias (definidos com a usuária).
 export const CARD_WEIGHTS = { easy: 100, normal: 80, hard: 50, wrong: 20 };
@@ -51,13 +52,11 @@ export function retentionLevel(retention: number): RetentionLevel {
   return 'baixa';
 }
 
-/** Próxima revisão (YYYY-MM-DD) a partir da retenção atual e da data informada. */
-export function scheduleNextReview(retention: number, fromDate: Date = new Date()): string {
+/** Próxima revisão (YYYY-MM-DD) a partir da retenção atual e da data informada (YYYY-MM-DD, Brasília). */
+export function scheduleNextReview(retention: number, fromDate: string = hojeBR()): string {
   const level = retentionLevel(retention);
   const days = REVIEW_INTERVAL_DAYS[level];
-  const next = new Date(fromDate);
-  next.setDate(next.getDate() + days);
-  return next.toISOString().split('T')[0];
+  return somarDiasBR(fromDate, days);
 }
 
 /** Cria/atualiza o registro de um bloco a partir de uma nova informação. */
@@ -68,8 +67,7 @@ export function upsertBlockRecord(
     totalCards: number; easy: number; normal: number; hard: number; wrong: number;
   }
 ): OslerBlockRecord {
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
+  const todayStr = hojeBR();
   const retention = blockRetention(input);
   const historyEntry = {
     date: todayStr,
@@ -84,7 +82,7 @@ export function upsertBlockRecord(
     easy: input.easy, normal: input.normal, hard: input.hard, wrong: input.wrong,
     retention,
     lastInformedDate: todayStr,
-    nextReviewDate: scheduleNextReview(retention, today),
+    nextReviewDate: scheduleNextReview(retention, todayStr),
     history: [...(existing?.history ?? []), historyEntry], // nunca apaga histórico
   };
 }
@@ -116,14 +114,13 @@ export function contentRetention(blocks: OslerBlockRecord[]): number | null {
 
 export type ReviewStatus = 'vencida' | 'hoje' | 'proxima' | 'futura' | 'sem_dados';
 
-export function reviewStatus(block: OslerBlockRecord, today: Date = new Date()): ReviewStatus {
-  const t = today.toISOString().split('T')[0];
+export function reviewStatus(block: OslerBlockRecord, today: string = hojeBR()): ReviewStatus {
+  const t = today;
   if (!block.nextReviewDate) return 'sem_dados';
   if (block.nextReviewDate < t) return 'vencida';
   if (block.nextReviewDate === t) return 'hoje';
   // "próxima" = dentro de 3 dias
-  const diff =
-    (new Date(block.nextReviewDate).getTime() - new Date(t).getTime()) / 86400000;
+  const diff = diferencaDiasBR(t, block.nextReviewDate);
   return diff <= 3 ? 'proxima' : 'futura';
 }
 
@@ -132,7 +129,7 @@ export function reviewStatus(block: OslerBlockRecord, today: Date = new Date()):
  * Vencida/hoje puxa forte; próxima puxa moderado; futura/sem dados = 0.
  * É a saída que "liga" o fator revisão (peso 20) do priorityEngine.
  */
-export function contentReviewNeed(blocks: OslerBlockRecord[], today: Date = new Date()): number {
+export function contentReviewNeed(blocks: OslerBlockRecord[], today: string = hojeBR()): number {
   if (!blocks.length) return 0;
   let need = 0;
   for (const b of blocks) {

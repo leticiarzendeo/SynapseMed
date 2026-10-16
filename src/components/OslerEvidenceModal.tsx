@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { hojeBR } from '../utils/dateBR';
 import { ContentItem, OslerCardSample, OslerCardReview } from '../types';
 
 interface OslerEvidenceModalProps {
@@ -104,7 +105,7 @@ export const OslerEvidenceModal: React.FC<OslerEvidenceModalProps> = ({
           rating,
           score,
           weight: 1.0,
-          date: new Date().toISOString().split('T')[0],
+          date: hojeBR(),
           daysAgoText: 'Hoje',
         };
 

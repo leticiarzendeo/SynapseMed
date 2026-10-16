@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { hojeBR } from '../utils/dateBR';
 import { UserPreferences, ErrorReasonType, ContentItem, AreaItem, OslerBlockRecord, DayCapacityConfig } from '../types';
 import { getContentState } from '../utils/contentState';
 import { buildTodayPlan, rankContentsByPriority, ContentPriority, ActivityKind } from '../utils/priorityEngine';
@@ -157,7 +158,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
 
   // 1º Osler pendente cuja data já chegou -> vira atividade de revisão no topo.
   const oslerPendingActivities: ActivityItem[] = React.useMemo(() => {
-    const hoje = new Date().toISOString().split('T')[0];
+    const hoje = hojeBR();
     const contents = (curriculum ?? []).flatMap((a) =>
       a.modules.flatMap((m) => m.contents.map((c) => ({ c, mod: m.name })))
     );
@@ -358,7 +359,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
     // Constrói o registro de autonomia com os 3 impactos calculados
     const overrideRecord: UserOverrideRecord = {
       id: `override-${Date.now()}`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }),
       originalActivity: original,
       chosenActivity: newActivity,
       weeklyPlanImpact: `A atividade de ${original.name} (${original.durationMin} min) sob as bancas USP/UNIFESP foi postergada para quarta-feira, mantendo a cota de ${preferences.weeklyHoursTarget}h da semana perfeitamente equilibrada.`,

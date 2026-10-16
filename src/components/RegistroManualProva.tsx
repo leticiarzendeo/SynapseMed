@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { fullCurriculumHierarchy } from '../data/mockData';
+import { hojeBR } from '../utils/dateBR';
 import {
   AreaItem,
   ContentItem,
@@ -149,7 +150,7 @@ export const RegistroManualProva: React.FC<RegistroManualProvaProps> = ({
     setFormError('');
   };
 
-  const today = () => new Date().toISOString().split('T')[0];
+  const today = () => hojeBR();
   const sourceLabel = () =>
     [examTitle.trim(), examSource.trim()].filter(Boolean).join(' · ') ||
     'Registro manual';

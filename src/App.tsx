@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { hojeBR, somarDiasBR } from './utils/dateBR';
 import { ViewPath, StudyActivity, UserPreferences, SessionCompletionReport, CadernoErroItem, EvidenceRecord, OslerBlockRecord } from './types';
 import { upsertBlockRecord } from './utils/retentionEngine';
 import { DEFAULT_WEEK_DAYS } from './utils/planningEngine';
@@ -236,7 +237,7 @@ export default function App() {
     durationMinutes: number;
     notes?: string;
   }) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = hojeBR();
     const records: EvidenceRecord[] = [];
     if (input.preTotal && input.preTotal > 0) {
       records.push({
@@ -263,9 +264,7 @@ export default function App() {
       const jaTemBloco = oslerBlocks.some((b) => b.contentId === input.contentId);
       setOslerPending((prev) => {
         if (jaTemBloco || prev.some((p) => p.contentId === input.contentId)) return prev;
-        const due = new Date();
-        due.setDate(due.getDate() + 2);
-        return [...prev, { contentId: input.contentId, dueDate: due.toISOString().split('T')[0] }];
+        return [...prev, { contentId: input.contentId, dueDate: somarDiasBR(hojeBR(), 2) }];
       });
     }
   };
@@ -321,7 +320,7 @@ export default function App() {
               status: newStatus,
               completedAt:
                 newStatus === 'concluido'
-                  ? new Date().toISOString().split('T')[0]
+                  ? hojeBR()
                   : undefined,
             }
           : act
@@ -352,7 +351,7 @@ export default function App() {
           ? {
               ...act,
               status: 'concluido',
-              completedAt: new Date().toISOString().split('T')[0],
+              completedAt: hojeBR(),
             }
           : act
       )
@@ -370,7 +369,7 @@ export default function App() {
       const record: EvidenceRecord = {
         id: `ev-${Date.now()}`,
         contentId,
-        date: new Date().toISOString().split('T')[0],
+        date: hojeBR(),
         kind: report.type,
         questionsTotal: report.questionsTotal,
         questionsCorrect: report.questionsCorrect,
@@ -398,7 +397,7 @@ export default function App() {
         reason: report.errorNote,
         reasonCategory: report.errorReasonCategory || 'outro',
         institutionOrContext: report.toolUsed,
-        createdAt: new Date().toISOString().split('T')[0],
+        createdAt: hojeBR(),
         examType: report.type === 'questoes' ? 'BANCO_QUESTOES' : undefined,
       };
       setCadernoErros((prev) => [newErr, ...prev]);
