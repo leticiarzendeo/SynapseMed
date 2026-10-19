@@ -41,6 +41,8 @@ interface ActivityItem {
   isMoved?: boolean;
 }
 
+const TODAY_AVAILABLE_KEY = 'synapsemed_today_available';
+
 interface HojeViewProps {
   preferences: UserPreferences;
   onNavigateToPlanejamento?: () => void;
@@ -97,11 +99,22 @@ export const HojeView: React.FC<HojeViewProps> = ({
     if (!active.length) return 100;
     return Math.round(active.reduce((s, d) => s + d.capacityMin, 0) / active.length);
   }, [weekDays]);
-  // Cota de disponibilidade diária (padrão 100 min / 1h40)
-  const [availableTodayMin, setAvailableTodayMin] = useState<number>(suggestedTodayMin);
+  // Tempo de hoje escolhido manualmente, salvo com a data (Brasília) para
+  // sobreviver à troca de aba e ao recarregar. No dia seguinte, volta à sugestão.
+  const hoje = hojeBR();
+  const savedTodayMin = React.useMemo(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(TODAY_AVAILABLE_KEY) || 'null');
+      return saved?.date === hoje && Number(saved.minutes) > 0 ? Number(saved.minutes) : null;
+    } catch {
+      return null;
+    }
+  }, [hoje]);
+  // Cota de disponibilidade diária
+  const [availableTodayMin, setAvailableTodayMin] = useState<number>(savedTodayMin ?? suggestedTodayMin);
   // Se a usuária não ajustou manualmente o tempo de hoje, ele acompanha a
   // sugestão derivada da semana (que agora é central e persistida).
-  const [todayManuallySet, setTodayManuallySet] = useState(false);
+  const [todayManuallySet, setTodayManuallySet] = useState(savedTodayMin !== null);
   useEffect(() => {
     if (!todayManuallySet) setAvailableTodayMin(suggestedTodayMin);
   }, [suggestedTodayMin, todayManuallySet]);
@@ -424,6 +437,11 @@ export const HojeView: React.FC<HojeViewProps> = ({
   const handleSelectAvailableTime = (min: number) => {
     setAvailableTodayMin(min);
     setTodayManuallySet(true);
+    try {
+      localStorage.setItem(TODAY_AVAILABLE_KEY, JSON.stringify({ date: hojeBR(), minutes: min }));
+    } catch {
+      // Sem localStorage: vale só enquanto a tela estiver aberta.
+    }
     // O plano recomputa automaticamente (useMemo/useEffect) a partir do novo
     // tempo disponível e do currículo real — sem listas fixas.
     showToast(

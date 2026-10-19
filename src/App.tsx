@@ -447,6 +447,7 @@ export default function App() {
       localStorage.removeItem('synapsemed_osler_pending');
       localStorage.removeItem('synapsemed_week_days');
       localStorage.removeItem('synapsemed_weekly_completed_minutes');
+      localStorage.removeItem('synapsemed_today_available');
       localStorage.setItem('synapsemed_storage_version', CURRENT_STORAGE_VERSION);
     }
     setActivities(initialActivities);
