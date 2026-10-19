@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { hojeBR } from '../utils/dateBR';
+import { hojeBR, segundaDaSemanaBR } from '../utils/dateBR';
 import { UserPreferences, ErrorReasonType, ContentItem, AreaItem, OslerBlockRecord, DayCapacityConfig } from '../types';
 import { getContentState } from '../utils/contentState';
 import { buildTodayPlan, rankContentsByPriority, ContentPriority, ActivityKind } from '../utils/priorityEngine';
@@ -255,19 +255,29 @@ export const HojeView: React.FC<HojeViewProps> = ({
 
   // Daily & Weekly totals
   const totalPlannedMinutes = activities.reduce((acc, a) => acc + a.durationMin, 0); // 90 min (1h30)
+  // Minutos concluídos na semana, salvos junto com a segunda-feira da semana
+  // (Brasília). Valor de outra semana (ou no formato antigo, só o número) zera.
+  const semanaAtual = segundaDaSemanaBR();
   const [completedMinutes, setCompletedMinutes] = useState<number>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('synapsemed_weekly_completed_minutes');
-      if (saved) return parseInt(saved, 10) || 0;
+      try {
+        const saved = JSON.parse(localStorage.getItem('synapsemed_weekly_completed_minutes') || 'null');
+        if (saved?.week === semanaAtual) return Number(saved.minutes) || 0;
+      } catch {
+        // formato antigo ou inválido: começa a semana do zero
+      }
     }
     return 0;
   });
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('synapsemed_weekly_completed_minutes', completedMinutes.toString());
+      localStorage.setItem(
+        'synapsemed_weekly_completed_minutes',
+        JSON.stringify({ week: semanaAtual, minutes: completedMinutes })
+      );
     }
-  }, [completedMinutes]);
+  }, [completedMinutes, semanaAtual]);
 
   // Timer effect
   useEffect(() => {
