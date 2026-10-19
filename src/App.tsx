@@ -120,6 +120,18 @@ export default function App() {
     return DEFAULT_WEEK_DAYS;
   });
 
+  // Tempo escolhido em "Ajustar tempo de hoje" (Hoje e Planejamento leem daqui).
+  // Guardado com a data de Brasília: só vale no próprio dia.
+  const [todayAvailable, setTodayAvailable] = useState<{ date: string; minutes: number } | null>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('synapsemed_today_available') || 'null');
+      return saved && typeof saved.date === 'string' && Number(saved.minutes) > 0 ? saved : null;
+    } catch {
+      return null;
+    }
+  });
+  const todayAvailableMin = todayAvailable?.date === hojeBR() ? todayAvailable.minutes : null;
+
   // Registros agregados de blocos Osler (retenção/memória informada pela usuária)
   const [oslerBlocks, setOslerBlocks] = useState<OslerBlockRecord[]>(() => {
     const saved = localStorage.getItem('synapsemed_osler_blocks');
@@ -188,6 +200,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('synapsemed_week_days', JSON.stringify(weekDays));
   }, [weekDays]);
+
+  useEffect(() => {
+    if (todayAvailable) localStorage.setItem('synapsemed_today_available', JSON.stringify(todayAvailable));
+  }, [todayAvailable]);
 
   // A PONTE: telas com modelo próprio chamam isto ao concluir uma atividade,
   // passando apenas o contentId. Assim a conclusão propaga para o currículo,
@@ -554,6 +570,8 @@ export default function App() {
               curriculum={studiedCurriculum}
               oslerBlocks={oslerBlocks}
               weekDays={weekDays}
+              todayAvailableMin={todayAvailableMin}
+              onChangeTodayAvailable={(minutes) => setTodayAvailable({ date: hojeBR(), minutes })}
             />
           )}
 
@@ -567,6 +585,7 @@ export default function App() {
               weekDays={weekDays}
               onChangeWeekDays={setWeekDays}
               oslerPending={oslerPending}
+              todayAvailableMin={todayAvailableMin}
             />
           )}
 

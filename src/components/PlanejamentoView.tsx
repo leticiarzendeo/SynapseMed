@@ -25,7 +25,8 @@ import {
   calculateDeficitImpact,
   DURATION_CALIBRATION_FACTORS,
 } from '../utils/planningEngine';
-import { buildWeeklyPlan, ContentPriority } from '../utils/priorityEngine';
+import { ContentPriority } from '../utils/priorityEngine';
+import { buildCurrentWeekPlan } from '../utils/weekPlan';
 import { computePace } from '../utils/paceEngine';
 
 // DD/MM a partir de YYYY-MM-DD.
@@ -42,6 +43,8 @@ interface PlanejamentoViewProps {
   onChangeWeekDays?: (days: DayCapacityConfig[]) => void;
   /** 1º Osler pendente por conteúdo (aparece na grade no dia agendado). */
   oslerPending?: { contentId: string; dueDate: string }[];
+  /** Tempo escolhido hoje na aba Hoje; null = capacidade configurada do dia. */
+  todayAvailableMin?: number | null;
 }
 
 export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
@@ -53,6 +56,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
   weekDays,
   onChangeWeekDays,
   oslerPending = [],
+  todayAvailableMin = null,
 }) => {
   // Mode: 🤖 Recomendação do Algoritmo vs 👤 Seu Plano
   const [viewLayer, setViewLayer] = useState<'algoritmo' | 'usuario'>('usuario');
@@ -127,13 +131,17 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
   // respeitando a capacidade de cada dia. A usuária pode ajustar depois.
   const pace = React.useMemo(() => computePace(curriculum ?? [], preferences.weeklyHoursTarget), [curriculum, preferences.weeklyHoursTarget]);
   const recommendedWeek = React.useMemo(() => {
-    const weekdayCaps = DAY_KEYS.map((k) => {
-      const d = days.find((x) => x.key === k);
-      // Dia que já passou nesta semana não recebe atividade nova.
-      const cap = diaPassou(k) ? 0 : d?.capacityMin ?? 96;
-      return { key: k, label: k.toUpperCase(), capacityMin: cap };
+    // Mesmo plano da aba Hoje: dias passados sem atividade, tempo escolhido
+    // hoje no lugar da capacidade de hoje e foco de módulo das Configurações.
+    const plan = buildCurrentWeekPlan({
+      curriculum: curriculum ?? [],
+      weekDays: days,
+      oslerBlocks,
+      paceFactor: pace.paceFactor,
+      focoModulo: preferences.focoModulo,
+      todayMinutes: todayAvailableMin,
+      hojeISO,
     });
-    const plan = buildWeeklyPlan(curriculum ?? [], weekdayCaps, oslerBlocks, pace.paceFactor);
     const acts: PlanningActivityItem[] = [];
 
     // Osler pendentes: encaixa cada um no dia da semana da sua data agendada
@@ -173,7 +181,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
     }
     return acts;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [curriculum, oslerBlocks, pace.paceFactor, days, oslerPending, hojeISO]);
+  }, [curriculum, oslerBlocks, pace.paceFactor, days, oslerPending, hojeISO, preferences.focoModulo, todayAvailableMin]);
 
   const [activities, setActivities] = useState<PlanningActivityItem[]>(recommendedWeek);
   React.useEffect(() => {
@@ -207,7 +215,11 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
 
   // Relógio diário: dados do dia real (no fim de semana, o próprio sábado/domingo).
   const fmtMin = (m: number) => `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`;
-  const capacidadeHojeMin = days.find((d) => d.key === hojeKey)?.capacityMin ?? 0;
+  // Tempo escolhido hoje na aba Hoje, se houver; senão a capacidade configurada.
+  const capacidadeHojeMin =
+    !fimDeSemana && todayAvailableMin != null
+      ? todayAvailableMin
+      : days.find((d) => d.key === hojeKey)?.capacityMin ?? 0;
   const atividadesHoje = fimDeSemana ? [] : activities.filter((a) => a.currentDay === hojeKey);
   const planejadoHojeMin = atividadesHoje.reduce((acc, a) => acc + a.durationMin, 0);
   const concluidoHojeMin = atividadesHoje
@@ -879,7 +891,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                           )}
                         </div>
                         <span className="text-[0.6875rem] text-secondary">
-                          Capacidade: <strong className="text-on-surface">{day.plannedStr}</strong>
+                          Capacidade: <strong className="text-on-surface">{isHoje(day.key) && todayAvailableMin != null ? fmtMin(todayAvailableMin) : day.plannedStr}</strong>
                         </span>
                       </div>
 

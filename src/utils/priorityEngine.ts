@@ -227,9 +227,10 @@ export function buildWeeklyPlan(
   hierarchy: readonly AreaItem[],
   days: { key: string; label: string; capacityMin: number }[],
   oslerBlocks: readonly OslerBlockRecord[] = [],
-  paceFactor = 0
+  paceFactor = 0,
+  focoModulo?: string
 ): WeekDayPlan[] {
-  const ranked = rankContentsByPriority(hierarchy, oslerBlocks, paceFactor)
+  const ranked = rankContentsByPriority(hierarchy, oslerBlocks, paceFactor, focoModulo)
     .filter((c) => c.priorityScore > 0);
 
   const plan: WeekDayPlan[] = days.map((d) => ({

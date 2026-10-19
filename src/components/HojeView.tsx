@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { hojeBR, segundaDaSemanaBR } from '../utils/dateBR';
+import { chaveDiaSemanaBR, hojeBR, segundaDaSemanaBR } from '../utils/dateBR';
+import { buildCurrentWeekPlan, WEEKDAY_KEYS } from '../utils/weekPlan';
 import { UserPreferences, ErrorReasonType, ContentItem, AreaItem, OslerBlockRecord, DayCapacityConfig } from '../types';
 import { getContentState } from '../utils/contentState';
 import { buildTodayPlan, rankContentsByPriority, ContentPriority, ActivityKind } from '../utils/priorityEngine';
@@ -41,8 +42,6 @@ interface ActivityItem {
   isMoved?: boolean;
 }
 
-const TODAY_AVAILABLE_KEY = 'synapsemed_today_available';
-
 interface HojeViewProps {
   preferences: UserPreferences;
   onNavigateToPlanejamento?: () => void;
@@ -70,6 +69,9 @@ interface HojeViewProps {
   /** 1º Osler pendente por conteúdo (criado ao concluir teoria). */
   oslerPending?: { contentId: string; dueDate: string }[];
   onNavigateToRevisoes?: () => void;
+  /** Tempo escolhido para hoje (fonte no App); null = usa a sugestão da semana. */
+  todayAvailableMin?: number | null;
+  onChangeTodayAvailable?: (minutes: number) => void;
 }
 
 export const HojeView: React.FC<HojeViewProps> = ({
@@ -84,6 +86,8 @@ export const HojeView: React.FC<HojeViewProps> = ({
   onNavigate,
   oslerPending = [],
   onNavigateToRevisoes,
+  todayAvailableMin = null,
+  onChangeTodayAvailable,
 }) => {
   // Fatia de hoje sugerida a partir da semana: capacidade do dia de hoje, ou
   // média dos dias com capacidade > 0 (dias de descanso não entram).
@@ -99,25 +103,9 @@ export const HojeView: React.FC<HojeViewProps> = ({
     if (!active.length) return 100;
     return Math.round(active.reduce((s, d) => s + d.capacityMin, 0) / active.length);
   }, [weekDays]);
-  // Tempo de hoje escolhido manualmente, salvo com a data (Brasília) para
-  // sobreviver à troca de aba e ao recarregar. No dia seguinte, volta à sugestão.
-  const hoje = hojeBR();
-  const savedTodayMin = React.useMemo(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(TODAY_AVAILABLE_KEY) || 'null');
-      return saved?.date === hoje && Number(saved.minutes) > 0 ? Number(saved.minutes) : null;
-    } catch {
-      return null;
-    }
-  }, [hoje]);
-  // Cota de disponibilidade diária
-  const [availableTodayMin, setAvailableTodayMin] = useState<number>(savedTodayMin ?? suggestedTodayMin);
-  // Se a usuária não ajustou manualmente o tempo de hoje, ele acompanha a
-  // sugestão derivada da semana (que agora é central e persistida).
-  const [todayManuallySet, setTodayManuallySet] = useState(savedTodayMin !== null);
-  useEffect(() => {
-    if (!todayManuallySet) setAvailableTodayMin(suggestedTodayMin);
-  }, [suggestedTodayMin, todayManuallySet]);
+  // Cota de hoje: o tempo escolhido em "Ajustar tempo de hoje" (guardado no
+  // App, vale só no dia) ou, sem escolha, a sugestão derivada da semana.
+  const availableTodayMin = todayAvailableMin ?? suggestedTodayMin;
 
   // Converte a recomendação do motor de prioridade (ContentPriority) para o
   // formato de card usado pela tela (ActivityItem).
@@ -163,11 +151,25 @@ export const HojeView: React.FC<HojeViewProps> = ({
   // Ritmo/prazo (meta dez/2028): informa a pressão de prazo p/ o motor.
   const pace = React.useMemo(() => computePace(curriculum ?? [], preferences.weeklyHoursTarget), [curriculum, preferences.weeklyHoursTarget]);
 
-  // Plano de hoje gerado pelo motor real, a partir do currículo + tempo + prazo.
-  const recommendedPlan = React.useMemo(
-    () => planToActivities(buildTodayPlan(curriculum ?? [], availableTodayMin, 2, oslerBlocks, pace.paceFactor, preferences.focoModulo)),
-    [curriculum, availableTodayMin, oslerBlocks, pace.paceFactor, preferences.focoModulo]
-  );
+  // Plano de hoje = o dia de hoje no plano da semana (o mesmo do Planejamento).
+  // Fim de semana ou dia útil sem capacidade e sem tempo escolhido: o
+  // Planejamento não tem nada para hoje, então o Hoje sugere pela prioridade.
+  const recommendedPlan = React.useMemo(() => {
+    const todayKey = chaveDiaSemanaBR();
+    const todayCapacity = weekDays?.find((d) => d.key === todayKey)?.capacityMin ?? 0;
+    const inWeekPlan = WEEKDAY_KEYS.includes(todayKey) && (todayAvailableMin != null || todayCapacity > 0);
+    const plan = inWeekPlan
+      ? buildCurrentWeekPlan({
+          curriculum: curriculum ?? [],
+          weekDays: weekDays ?? [],
+          oslerBlocks,
+          paceFactor: pace.paceFactor,
+          focoModulo: preferences.focoModulo,
+          todayMinutes: todayAvailableMin,
+        }).find((d) => d.key === todayKey)?.activities ?? []
+      : buildTodayPlan(curriculum ?? [], availableTodayMin, 2, oslerBlocks, pace.paceFactor, preferences.focoModulo);
+    return planToActivities(plan);
+  }, [curriculum, weekDays, todayAvailableMin, availableTodayMin, oslerBlocks, pace.paceFactor, preferences.focoModulo]);
 
   // 1º Osler pendente cuja data já chegou -> vira atividade de revisão no topo.
   const oslerPendingActivities: ActivityItem[] = React.useMemo(() => {
@@ -435,13 +437,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
   };
 
   const handleSelectAvailableTime = (min: number) => {
-    setAvailableTodayMin(min);
-    setTodayManuallySet(true);
-    try {
-      localStorage.setItem(TODAY_AVAILABLE_KEY, JSON.stringify({ date: hojeBR(), minutes: min }));
-    } catch {
-      // Sem localStorage: vale só enquanto a tela estiver aberta.
-    }
+    onChangeTodayAvailable?.(min);
     // O plano recomputa automaticamente (useMemo/useEffect) a partir do novo
     // tempo disponível e do currículo real — sem listas fixas.
     showToast(
