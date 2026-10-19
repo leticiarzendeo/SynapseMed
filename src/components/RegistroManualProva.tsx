@@ -408,8 +408,8 @@ export const RegistroManualProva: React.FC<RegistroManualProvaProps> = ({
             style={{
               flex: 1, padding: 10, borderRadius: 8, cursor: 'pointer', fontWeight: 500, fontSize: 14,
               border: outcome === 'acertei' ? '2px solid #16a34a' : '0.5px solid var(--color-outline,#cbd5e1)',
-              background: outcome === 'acertei' ? '#f0fdf4' : 'transparent',
-              color: outcome === 'acertei' ? '#15803d' : 'inherit',
+              background: outcome === 'acertei' ? 'var(--color-green-50)' : 'transparent',
+              color: outcome === 'acertei' ? 'var(--color-green-700)' : 'inherit',
             }}
           >
             ✓ Acertei
@@ -419,8 +419,8 @@ export const RegistroManualProva: React.FC<RegistroManualProvaProps> = ({
             style={{
               flex: 1, padding: 10, borderRadius: 8, cursor: 'pointer', fontWeight: 500, fontSize: 14,
               border: outcome === 'errei' ? '2px solid #dc2626' : '0.5px solid var(--color-outline,#cbd5e1)',
-              background: outcome === 'errei' ? '#fef2f2' : 'transparent',
-              color: outcome === 'errei' ? '#b91c1c' : 'inherit',
+              background: outcome === 'errei' ? 'var(--color-red-50)' : 'transparent',
+              color: outcome === 'errei' ? 'var(--color-red-700)' : 'inherit',
             }}
           >
             ✕ Errei

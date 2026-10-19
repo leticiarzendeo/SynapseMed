@@ -1061,13 +1061,13 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
             className="rounded-3xl p-6 border shadow-xs space-y-4"
             style={{
               background:
-                pace.status === 'atrasada' ? '#fef2f2'
-                : pace.status === 'adiantada' ? '#eff6ff'
-                : pace.status === 'concluido' ? '#f0fdf4' : '#fffbeb',
+                pace.status === 'atrasada' ? 'var(--color-red-50)'
+                : pace.status === 'adiantada' ? 'var(--color-blue-50)'
+                : pace.status === 'concluido' ? 'var(--color-green-50)' : 'var(--color-amber-50)',
               borderColor:
-                pace.status === 'atrasada' ? '#fecaca'
-                : pace.status === 'adiantada' ? '#bfdbfe'
-                : pace.status === 'concluido' ? '#bbf7d0' : '#fde68a',
+                pace.status === 'atrasada' ? 'var(--color-red-200)'
+                : pace.status === 'adiantada' ? 'var(--color-blue-200)'
+                : pace.status === 'concluido' ? 'var(--color-green-200)' : 'var(--color-amber-200)',
             }}
           >
             <div className="flex items-center justify-between gap-3">
@@ -1310,13 +1310,13 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
             <div
               className="p-5 rounded-2xl border space-y-3"
               style={{
-                background: deficitState.isPaceExceeded ? '#fffbeb' : '#f0fdf4',
-                borderColor: deficitState.isPaceExceeded ? '#fde68a' : '#bbf7d0',
+                background: deficitState.isPaceExceeded ? 'var(--color-amber-50)' : 'var(--color-green-50)',
+                borderColor: deficitState.isPaceExceeded ? 'var(--color-amber-200)' : 'var(--color-green-200)',
               }}
             >
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <span className="text-xs font-black flex items-center gap-1.5"
-                  style={{ color: deficitState.isPaceExceeded ? '#92400e' : '#166534' }}>
+                  style={{ color: deficitState.isPaceExceeded ? 'var(--color-amber-800)' : 'var(--color-green-800)' }}>
                   <span>{deficitState.isPaceExceeded ? '🟠' : '🟢'}</span>
                   <span>
                     {deficitState.isPaceExceeded
@@ -1325,7 +1325,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                   </span>
                 </span>
                 <span className="text-xs font-bold font-code-metric"
-                  style={{ color: deficitState.isPaceExceeded ? '#92400e' : '#166534' }}>
+                  style={{ color: deficitState.isPaceExceeded ? 'var(--color-amber-800)' : 'var(--color-green-800)' }}>
                   Déficit: {deficitState.accumulatedDeficitHours}h
                 </span>
               </div>
@@ -1350,7 +1350,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                 </div>
               </div>
               <p className="text-xs leading-relaxed"
-                style={{ color: deficitState.isPaceExceeded ? '#78350f' : '#14532d' }}>
+                style={{ color: deficitState.isPaceExceeded ? 'var(--color-amber-900)' : 'var(--color-green-900)' }}>
                 {deficitState.isPaceExceeded
                   ? `Em vez de jogar tudo na semana seguinte, o sistema dilui as ${deficitState.accumulatedDeficitHours}h ao longo das ${pace.weeksRemaining} semanas restantes até dez/2028, elevando o ritmo para ~${deficitState.paceNeededHours}h/semana. Considere também concentrar recuperação em semanas de férias.`
                   : `As ${deficitState.accumulatedDeficitHours}h perdidas são diluídas ao longo das ${pace.weeksRemaining} semanas restantes (+${deficitState.amortizationPerWeekMin} min/semana). Sem sobrecarga e sem impacto no prazo de dez/2028.`}

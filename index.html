@@ -9,6 +9,18 @@
     <meta property="og:description" content="Sistema de estudos e priorização adaptativa com análise automática de provas dos últimos 5 anos (USP-RP, USP-SP, UNICAMP, ENAMED e HIAE) e matriz de incidência institucional." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="color-scheme" content="light dark" />
+    <!-- Aplica o tema escuro antes da renderização (evita piscar o claro). -->
+    <script>
+      (function () {
+        var t = null;
+        try { t = localStorage.getItem('synapsemed_theme'); } catch (e) {}
+        if (t !== 'light' && t !== 'dark') {
+          t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        if (t === 'dark') document.documentElement.classList.add('dark');
+      })();
+    </script>
     <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

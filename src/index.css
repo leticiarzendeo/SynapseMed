@@ -1,4 +1,8 @@
 @import "tailwindcss";
+@import "./theme-dark.css";
+
+/* Classe .dark no <html> liga o tema escuro (ver src/utils/theme.ts). */
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --color-on-surface-variant: #565563;
@@ -178,4 +182,69 @@
    em vez do neon puro. Mantém a identidade, mas lê bem. */
 .text-primary {
   color: #6F8F1F !important;
+}
+
+/* ============================================================
+   Tema escuro: os mesmos tokens com valores escuros.
+   As paletas do Tailwind (emerald, amber...) são invertidas em
+   theme-dark.css, gerado por scripts/buildDarkPalette.ts.
+   ============================================================ */
+.dark {
+  color-scheme: dark;
+
+  --color-background: #121218;
+  --color-surface: #121218;
+  --color-surface-dim: #18181F;
+  --color-surface-bright: #2A2A36;
+  --color-surface-variant: #2A2A36;
+  --color-surface-container-lowest: #1B1B24;
+  --color-surface-container-low: #21212B;
+  --color-surface-container: #2C2C38;
+  --color-surface-container-high: #34343F;
+  --color-surface-container-highest: #3C3C48;
+
+  --color-on-surface: #ECECF2;
+  --color-on-background: #ECECF2;
+  --color-on-surface-variant: #A6A6B8;
+  --color-secondary: #A6A6B8;
+  --color-outline: #6E6E80;
+  --color-outline-variant: #4A4A5A;
+
+  --color-secondary-container: #2C3416;
+  --color-on-secondary-container: #D9F378;
+  --color-secondary-fixed: #2C3416;
+  --color-primary-fixed: #2C3416;
+
+  --color-tertiary: #ECECF2;
+  --color-tertiary-container: #2A2940;
+  --color-inverse-surface: #ECECF2;
+  --color-inverse-on-surface: #201F31;
+
+  --color-error: #FF8A80;
+  --color-error-container: #4A1A1A;
+  --color-on-error-container: #FFB4AB;
+}
+
+/* No escuro o verde-limão puro já é legível: dispensa o tom fechado e a borda. */
+.dark .text-primary {
+  color: #D9F378 !important;
+}
+.dark .bg-primary {
+  border-color: transparent;
+}
+
+/* Caixas brancas internas (formulários, cartões dentro de avisos). */
+.dark .bg-white {
+  background-color: var(--color-surface-container-lowest);
+}
+.dark .bg-white\/70,
+.dark .bg-white\/80,
+.dark .bg-white\/90 {
+  background-color: color-mix(in oklab, var(--color-surface-container-lowest) 80%, transparent);
+}
+
+/* Troca suave de tema (só cores, sem animar layout). */
+html.theme-transition,
+html.theme-transition * {
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease !important;
 }

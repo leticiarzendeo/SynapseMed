@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { UserPreferences } from '../types';
+import { useTheme } from '../utils/theme';
 
 interface HeaderProps {
   preferences: UserPreferences;
@@ -14,6 +15,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenPreferences,
   onSelectTopic,
 }) => {
+  const { theme, toggleTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -118,6 +120,19 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right: Notifications & User Info */}
       <div className="flex items-center gap-space-base">
+        {/* Tema claro/escuro */}
+        <button
+          onClick={toggleTheme}
+          className="p-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
+          type="button"
+          aria-label={theme === 'dark' ? 'Usar tema claro' : 'Usar tema escuro'}
+          title={theme === 'dark' ? 'Tema claro' : 'Tema escuro'}
+        >
+          <span className="material-symbols-outlined text-[1.375rem]">
+            {theme === 'dark' ? 'light_mode' : 'dark_mode'}
+          </span>
+        </button>
+
         {/* Notifications Popover Trigger */}
         <div className="relative">
           <button

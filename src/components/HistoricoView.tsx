@@ -167,7 +167,7 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
       {/* Resumo */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card v={String(resumo.atividades)} l="atividades" c="#2563eb" />
-        <Card v={`${resumo.horas}h`} l="horas estudadas" c="#201F31" />
+        <Card v={`${resumo.horas}h`} l="horas estudadas" c="var(--color-on-surface)" />
         <Card v={String(resumo.questoes)} l="questões feitas" c="#9333ea" />
         <Card v={resumo.acerto !== null ? `${resumo.acerto}%` : '—'} l="acerto geral" c="#16a34a" />
       </div>

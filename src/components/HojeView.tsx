@@ -536,15 +536,15 @@ export const HojeView: React.FC<HojeViewProps> = ({
         className="rounded-2xl p-4 border shadow-xs flex items-start gap-3"
         style={{
           background:
-            pace.status === 'atrasada' ? '#fef2f2'
-            : pace.status === 'adiantada' ? '#eff6ff'
-            : pace.status === 'concluido' ? '#f0fdf4'
-            : '#fffbeb',
+            pace.status === 'atrasada' ? 'var(--color-red-50)'
+            : pace.status === 'adiantada' ? 'var(--color-blue-50)'
+            : pace.status === 'concluido' ? 'var(--color-green-50)'
+            : 'var(--color-amber-50)',
           borderColor:
-            pace.status === 'atrasada' ? '#fecaca'
-            : pace.status === 'adiantada' ? '#bfdbfe'
-            : pace.status === 'concluido' ? '#bbf7d0'
-            : '#fde68a',
+            pace.status === 'atrasada' ? 'var(--color-red-200)'
+            : pace.status === 'adiantada' ? 'var(--color-blue-200)'
+            : pace.status === 'concluido' ? 'var(--color-green-200)'
+            : 'var(--color-amber-200)',
         }}
       >
         <span className="material-symbols-outlined"
@@ -610,8 +610,8 @@ export const HojeView: React.FC<HojeViewProps> = ({
                 <span
                   className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[0.6875rem]"
                   style={{
-                    background: pace.fitsInPlan ? '#dcfce7' : '#fef3c7',
-                    color: pace.fitsInPlan ? '#166534' : '#92400e',
+                    background: pace.fitsInPlan ? 'var(--color-green-100)' : 'var(--color-amber-100)',
+                    color: pace.fitsInPlan ? 'var(--color-green-800)' : 'var(--color-amber-800)',
                   }}
                 >
                   <span>{pace.fitsInPlan ? '🟢' : '🟠'}</span>

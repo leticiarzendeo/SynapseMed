@@ -128,7 +128,7 @@ export const ImportarProvaIA: React.FC<ImportarProvaIAProps> = ({
       )}
 
       {result && !result.ok && (
-        <div style={{ padding: 12, borderRadius: 8, background: '#fef2f2', border: '0.5px solid #fecaca', color: '#b91c1c', fontSize: 14 }}>
+        <div style={{ padding: 12, borderRadius: 8, background: 'var(--color-red-50)', border: '0.5px solid #fecaca', color: 'var(--color-red-700)', fontSize: 14 }}>
           {result.error}
           <div style={{ marginTop: 10 }}>
             <button onClick={() => setResult(null)} style={btn(false)}>Tentar de novo</button>
@@ -148,7 +148,7 @@ export const ImportarProvaIA: React.FC<ImportarProvaIAProps> = ({
           </div>
 
           {result.unmatched > 0 && (
-            <div style={{ padding: 10, borderRadius: 8, background: '#fffbeb', border: '0.5px solid #fde68a', fontSize: 12, color: '#92400e', marginBottom: 12 }}>
+            <div style={{ padding: 10, borderRadius: 8, background: 'var(--color-amber-50)', border: '0.5px solid #fde68a', fontSize: 12, color: 'var(--color-amber-800)', marginBottom: 12 }}>
               ⚠️ {result.unmatched} questão(ões) não casaram com nenhum conteúdo do
               currículo (a IA pode ter usado um id/nome fora da lista). Elas NÃO serão
               salvas — se quiser, registre-as depois no registro manual.
@@ -166,23 +166,23 @@ export const ImportarProvaIA: React.FC<ImportarProvaIAProps> = ({
                   display: 'flex',
                   justifyContent: 'space-between',
                   gap: 10,
-                  background: q.resolvedContentId ? 'transparent' : '#fff7ed',
+                  background: q.resolvedContentId ? 'transparent' : 'var(--color-orange-50)',
                 }}
               >
                 <span>
                   <strong>Q{q.number}</strong>{' '}
                   {q.resolvedContentId ? (
-                    <span style={{ color: '#475569' }}>
+                    <span style={{ color: 'var(--color-slate-600)' }}>
                       → {q.resolvedArea} › {q.resolvedContentName}
                       <span style={{ color: '#94a3b8' }}> ({q.matchType})</span>
                     </span>
                   ) : (
-                    <span style={{ color: '#b45309' }}>
+                    <span style={{ color: 'var(--color-amber-700)' }}>
                       não reconhecida ({q.contentName || 'sem conteúdo'})
                     </span>
                   )}
                 </span>
-                <span style={{ color: q.correct ? '#15803d' : '#b91c1c', fontWeight: 600 }}>
+                <span style={{ color: q.correct ? 'var(--color-green-700)' : 'var(--color-red-700)', fontWeight: 600 }}>
                   {q.correct ? '✓ acertou' : '✕ errou'}
                 </span>
               </div>
@@ -219,11 +219,11 @@ const Badge: React.FC<{ label: string; value: string; good?: boolean; warn?: boo
       style={{
         fontSize: 18,
         fontWeight: 700,
-        color: warn ? '#b45309' : good ? '#15803d' : '#0f172a',
+        color: warn ? 'var(--color-amber-700)' : good ? 'var(--color-green-700)' : 'var(--color-on-surface)',
       }}
     >
       {value}
     </div>
-    <div style={{ fontSize: 11, color: '#64748b' }}>{label}</div>
+    <div style={{ fontSize: 11, color: 'var(--color-slate-500)' }}>{label}</div>
   </div>
 );
