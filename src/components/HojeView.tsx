@@ -8,6 +8,7 @@ import { computePace } from '../utils/paceEngine';
 import { getAllCurriculumContents } from '../data/mockData';
 import { DominioDossieModal } from './DominioDossieModal';
 import { TodoFaculdade } from './TodoFaculdade';
+import { ConstanciaEstudos } from './ConstanciaEstudos';
 
 export interface UserOverrideRecord {
   id: string;
@@ -483,8 +484,9 @@ export const HojeView: React.FC<HojeViewProps> = ({
   return (
     <div className="w-full px-4 sm:px-6 py-6 max-w-7xl mx-auto flex flex-col xl:flex-row xl:items-start gap-6">
       {/* COLUNA DIREITA: To do da faculdade (bloco de notas, sem vínculo com os motores) */}
-      <aside className="w-full max-w-4xl mx-auto xl:mx-0 xl:w-80 xl:max-w-none shrink-0 xl:order-last xl:sticky xl:top-6">
+      <aside className="w-full max-w-4xl mx-auto xl:mx-0 xl:w-80 xl:max-w-none shrink-0 xl:order-last space-y-6">
         <TodoFaculdade />
+        <ConstanciaEstudos />
       </aside>
 
     <div className="flex flex-col w-full min-w-0 max-w-4xl mx-auto xl:mx-0 xl:flex-1 space-y-6">
