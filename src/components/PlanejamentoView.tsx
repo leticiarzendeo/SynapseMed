@@ -789,10 +789,12 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
             )}
           </section>
 
-          {/* BARRA DE CONTROLES: CAMADA DUPLA (ALGORITMO VS USUÁRIO) & FILTROS & AÇÕES */}
-          <section className="flex flex-wrap items-center gap-x-4 gap-y-3 bg-surface-container-lowest p-3 sm:p-4 rounded-3xl border border-surface-container shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
-            {/* Alternador Camada Dupla */}
-            <div className="flex items-center gap-2 shrink-0">
+          {/* BARRA DE CONTROLES em duas linhas:
+              1) visão (seu plano / algoritmo) + filtros de categoria
+              2) ações de replanejamento */}
+          <section className="space-y-2">
+            {/* Linha 1: visão + filtros */}
+            <div className="flex flex-wrap items-center gap-1.5 bg-surface-container-lowest px-2.5 py-2 rounded-2xl border border-surface-container shadow-[0_2px_14px_rgba(0,0,0,0.04)]">
               {(
                 [
                   { key: 'usuario', icon: 'person', label: 'Seu Plano Real' },
@@ -804,15 +806,15 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                   <button
                     key={m.key}
                     onClick={() => setViewLayer(m.key)}
-                    className={`relative overflow-hidden flex items-center gap-2.5 pl-3 pr-4 py-2 rounded-2xl border text-sm leading-tight text-left transition-all max-w-[11rem] ${
+                    className={`relative overflow-hidden flex items-center gap-1.5 pl-3 pr-3.5 py-1.5 rounded-xl border text-sm whitespace-nowrap transition-all ${
                       ativo
-                        ? 'bg-violet-50 border-violet-200 text-on-surface font-bold shadow-xs'
+                        ? 'bg-violet-50 border-violet-200 text-on-surface font-bold'
                         : 'bg-surface-container-low border-transparent text-secondary font-medium hover:text-on-surface hover:bg-surface-container'
                     }`}
                   >
                     {ativo && <span className="absolute left-0 top-0 bottom-0 w-1 bg-violet-600" aria-hidden="true" />}
                     <span
-                      className={`material-symbols-outlined text-[1.25rem] shrink-0 ${ativo ? 'text-violet-700' : ''}`}
+                      className={`material-symbols-outlined text-[1.1rem] ${ativo ? 'text-violet-700' : ''}`}
                       style={ativo ? { fontVariationSettings: "'FILL' 1" } : undefined}
                     >
                       {m.icon}
@@ -821,12 +823,9 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                   </button>
                 );
               })}
-            </div>
 
-            <div className="hidden sm:block w-px self-stretch bg-surface-container" aria-hidden="true" />
+              <span className="hidden sm:block w-px h-6 mx-1.5 bg-surface-container" aria-hidden="true" />
 
-            {/* Filtros de Categoria */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-1 gap-y-1">
               {(
                 [
                   { key: 'todas', label: 'Todas', icon: null, color: '' },
@@ -841,14 +840,14 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                   <button
                     key={fl.key}
                     onClick={() => setActiveFilter(fl.key as any)}
-                    className={`px-3.5 py-1.5 rounded-full text-sm whitespace-nowrap flex items-center gap-1.5 transition-all ${
+                    className={`px-3 py-1.5 rounded-full text-sm whitespace-nowrap flex items-center gap-1.5 transition-all ${
                       ativo
                         ? 'bg-violet-100 text-violet-800 font-bold'
                         : 'text-secondary font-medium hover:text-on-surface hover:bg-surface-container-low'
                     }`}
                   >
                     {fl.icon && (
-                      <span className={`material-symbols-outlined text-[1.15rem] ${ativo ? '' : fl.color}`}>{fl.icon}</span>
+                      <span className={`material-symbols-outlined text-[1.1rem] ${ativo ? '' : fl.color}`}>{fl.icon}</span>
                     )}
                     <span>{fl.label}</span>
                   </button>
@@ -856,31 +855,31 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
               })}
             </div>
 
-            {/* Ações de Replanejamento */}
-            <div className="flex flex-wrap items-center gap-2 ml-auto">
+            {/* Linha 2: ações de replanejamento */}
+            <div className="flex flex-wrap items-center gap-2 bg-surface-container-lowest px-2.5 py-2 rounded-2xl border border-surface-container shadow-[0_2px_14px_rgba(0,0,0,0.04)]">
               <button
                 onClick={() => setShowAnteciparModal(true)}
-                className="px-4 py-2 rounded-full border border-violet-200 bg-violet-50/60 hover:bg-violet-100 text-violet-800 text-sm font-bold flex items-center gap-1.5 transition-all"
+                className="px-3.5 py-1.5 rounded-full border border-violet-200 bg-violet-50/60 hover:bg-violet-100 text-violet-800 text-sm font-bold flex items-center gap-1.5 transition-all"
               >
-                <span className="material-symbols-outlined text-[1.2rem]">add</span>
+                <span className="material-symbols-outlined text-[1.1rem]">add</span>
                 <span>Adiantar Conteúdo</span>
               </button>
               <button
                 onClick={handleRecalculateRemaining}
-                className="px-4 py-2 rounded-full border border-lime-200 bg-lime-50 hover:bg-lime-100 text-lime-900 text-sm font-bold flex items-center gap-1.5 transition-all"
+                className="px-3.5 py-1.5 rounded-full border border-primary/50 bg-primary/15 hover:bg-primary/25 text-on-surface text-sm font-bold flex items-center gap-1.5 transition-all"
                 title="Refaz de hoje em diante, mantendo concluídas, atividades que você moveu e dias passados"
               >
-                <span className="material-symbols-outlined text-[1.2rem] text-amber-500" style={{ fontVariationSettings: "'FILL' 1" }}>
+                <span className="material-symbols-outlined text-[1.1rem] text-amber-500" style={{ fontVariationSettings: "'FILL' 1" }}>
                   auto_awesome
                 </span>
                 <span>Recalcular Restante</span>
               </button>
               <button
                 onClick={handleRecalculateAll}
-                className="px-4 py-2 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-bold flex items-center gap-1.5 shadow-sm transition-all"
+                className="px-3.5 py-1.5 rounded-full bg-primary hover:brightness-95 text-on-primary text-sm font-bold flex items-center gap-1.5 shadow-sm transition-all"
                 title="Refaz a semana inteira, mantendo só o que você já concluiu"
               >
-                <span className="material-symbols-outlined text-[1.2rem] text-yellow-300" style={{ fontVariationSettings: "'FILL' 1" }}>
+                <span className="material-symbols-outlined text-[1.1rem] text-on-primary" style={{ fontVariationSettings: "'FILL' 1" }}>
                   bolt
                 </span>
                 <span>Recalcular Tudo</span>
@@ -889,7 +888,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
           </section>
 
           {/* GRADE SEMANAL DIA A DIA (SEGUNDA A DOMINGO) */}
-          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {days.map((day) => {
               const dayActivities = filteredActivities.filter((a) =>
                 viewLayer === 'algoritmo' ? a.recommendedDay === day.key : a.currentDay === day.key
@@ -1016,7 +1015,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                                 {cat.label}
                               </span>
                               <span
-                                className="ml-auto inline-flex items-center gap-0.5 text-xs font-bold text-emerald-700 font-code-metric whitespace-nowrap"
+                                className="ml-auto inline-flex items-center gap-0.5 text-xs font-bold text-primary font-code-metric whitespace-nowrap"
                                 title={`Eficiência: benefício (${act.priorityScore} pts) ÷ tempo (${act.durationMin} min)`}
                               >
                                 <span className="material-symbols-outlined text-[1rem] text-orange-500" style={preenchido}>
@@ -1026,7 +1025,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                                 <span className="hidden @[24rem]:inline">&nbsp;pts/m</span>
                               </span>
                               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-surface-container-low text-xs font-bold text-on-surface whitespace-nowrap">
-                                <span className="material-symbols-outlined text-[1rem] text-emerald-700">schedule</span>
+                                <span className="material-symbols-outlined text-[1rem] text-primary">schedule</span>
                                 {act.durationMin} min
                               </span>
                             </div>
@@ -1036,21 +1035,21 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                               <div className="flex-1 min-w-0">
                                 <h3
                                   className={`text-base font-black text-on-surface leading-snug tracking-tight ${
-                                    feito ? 'line-through decoration-2 decoration-emerald-600/60' : ''
+                                    feito ? 'line-through decoration-2 decoration-primary' : ''
                                   }`}
                                 >
                                   {act.name}
                                 </h3>
                                 <span className="text-sm text-secondary">• {act.subType}</span>
                               </div>
-                              <div className="flex items-start gap-2 rounded-2xl bg-emerald-50 border border-emerald-100 px-3 py-2 @[26rem]:max-w-[48%]">
-                                <span className="material-symbols-outlined text-[1.1rem] text-emerald-600 mt-px" style={preenchido}>
+                              <div className="flex items-start gap-2 rounded-2xl bg-primary/10 border border-primary/30 px-3 py-2 @[26rem]:max-w-[48%]">
+                                <span className="material-symbols-outlined text-[1.1rem] text-primary mt-px" style={preenchido}>
                                   sell
                                 </span>
                                 <div className="min-w-0 leading-tight">
-                                  <span className="block text-xs font-bold text-emerald-900">{act.modulo}</span>
+                                  <span className="block text-xs font-bold text-on-surface">{act.modulo}</span>
                                   {act.specialty && act.specialty !== act.modulo && (
-                                    <span className="block text-[0.6875rem] text-emerald-800/80">({act.specialty})</span>
+                                    <span className="block text-[0.6875rem] text-secondary">({act.specialty})</span>
                                   )}
                                 </div>
                               </div>
@@ -1091,14 +1090,14 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
 
                             {/* Movido pelo Usuário */}
                             {act.isMovedByUser && (
-                              <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 border border-emerald-100 px-3 py-2.5">
-                                <span className="w-8 h-8 shrink-0 rounded-full bg-emerald-100 flex items-center justify-center">
-                                  <span className="material-symbols-outlined text-[1.1rem] text-emerald-700" style={preenchido}>
+                              <div className="flex items-center gap-3 rounded-2xl bg-primary/10 border border-primary/30 px-3 py-2.5">
+                                <span className="w-8 h-8 shrink-0 rounded-full bg-primary/25 flex items-center justify-center">
+                                  <span className="material-symbols-outlined text-[1.1rem] text-primary" style={preenchido}>
                                     person
                                   </span>
                                 </span>
                                 <div className="leading-tight">
-                                  <span className="block text-sm font-bold text-emerald-900">Movido por você</span>
+                                  <span className="block text-sm font-bold text-on-surface">Movido por você</span>
                                   <span className="block text-xs text-secondary">
                                     (Recomendação original: {(NOMES_DIA[act.recommendedDay] ?? act.recommendedDay).toLowerCase()})
                                   </span>
@@ -1117,7 +1116,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                                 }
                                 className={`${botaoSecundario} @[26rem]:flex-row @[26rem]:gap-1.5 !text-on-surface`}
                               >
-                                <span className="material-symbols-outlined text-[1.15rem] text-emerald-700">bookmark</span>
+                                <span className="material-symbols-outlined text-[1.15rem] text-primary">bookmark</span>
                                 <span className="leading-tight text-center">Remanejar dia</span>
                               </button>
                               <button
@@ -1139,15 +1138,15 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                               {!feito ? (
                                 <button
                                   onClick={() => handleCompleteActivity(act.id)}
-                                  className="rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-bold flex flex-col items-center justify-center gap-0.5 py-2.5 px-2 shadow-sm transition-all"
+                                  className="rounded-2xl bg-primary hover:brightness-95 text-on-primary text-sm font-bold flex flex-col items-center justify-center gap-0.5 py-2.5 px-2 shadow-sm transition-all"
                                 >
                                   <span>Concluir</span>
                                   <span className="material-symbols-outlined text-[1.25rem]">check</span>
                                 </button>
                               ) : (
-                                <span className="rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold flex flex-col items-center justify-center gap-0.5 py-2.5 px-2">
+                                <span className="rounded-2xl bg-primary/15 border border-primary/40 text-on-surface text-sm font-bold flex flex-col items-center justify-center gap-0.5 py-2.5 px-2">
                                   <span>Feito</span>
-                                  <span className="material-symbols-outlined text-[1.25rem]">task_alt</span>
+                                  <span className="material-symbols-outlined text-[1.25rem] text-primary">task_alt</span>
                                 </span>
                               )}
                             </div>
