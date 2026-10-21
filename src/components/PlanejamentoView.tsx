@@ -25,8 +25,8 @@ import {
   calculateDeficitImpact,
   DURATION_CALIBRATION_FACTORS,
 } from '../utils/planningEngine';
-import { ContentPriority } from '../utils/priorityEngine';
-import { buildCurrentWeekPlan } from '../utils/weekPlan';
+
+import { WeekSchedule, WeekScheduleItem } from '../utils/weekPlan';
 import { computePace } from '../utils/paceEngine';
 
 // DD/MM a partir de YYYY-MM-DD.
@@ -45,7 +45,15 @@ interface PlanejamentoViewProps {
   oslerPending?: { contentId: string; dueDate: string }[];
   /** Tempo escolhido hoje na aba Hoje; null = capacidade configurada do dia. */
   todayAvailableMin?: number | null;
+  /** Grade da semana guardada no App (a mesma da aba Hoje). */
+  weekSchedule?: WeekSchedule | null;
+  onMoveWeekItem?: (itemId: string, day: string) => void;
+  onCompleteWeekItem?: (itemId: string) => void;
+  onRecalcWeek?: (mode: 'remaining' | 'all') => void;
 }
+
+/** Prefixo dos ids de atividades que vêm da grade guardada (vs. Osler/antecipadas). */
+const GRADE_PREFIX = 'plan-';
 
 export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
   preferences,
@@ -57,6 +65,10 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
   onChangeWeekDays,
   oslerPending = [],
   todayAvailableMin = null,
+  weekSchedule = null,
+  onMoveWeekItem,
+  onCompleteWeekItem,
+  onRecalcWeek,
 }) => {
   // Mode: 🤖 Recomendação do Algoritmo vs 👤 Seu Plano
   const [viewLayer, setViewLayer] = useState<'algoritmo' | 'usuario'>('usuario');
@@ -106,10 +118,11 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
     sexta: 'Sexta', sabado: 'Sábado', domingo: 'Domingo',
   };
 
-  const cpToPlanning = (cp: ContentPriority, dayKey: string): PlanningActivityItem => {
+  const itemToPlanning = (item: WeekScheduleItem): PlanningActivityItem => {
+    const { cp } = item;
     const m = ACT_MAP[cp.recommendedActivity] ?? ACT_MAP.avanco;
     return {
-      id: `plan-${cp.contentId}-${cp.recommendedActivity}`,
+      id: `${GRADE_PREFIX}${item.id}`,
       contentId: cp.contentId,
       name: cp.contentName,
       subType: m.subType,
@@ -120,28 +133,18 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
       efficiencyPointsPerMin: cp.priorityScore / Math.max(1, cp.estimatedMinutes),
       specialty: cp.moduleName,
       modulo: cp.moduleName,
-      recommendedDay: dayKey,
-      currentDay: dayKey,
-      status: 'pendente',
+      recommendedDay: item.recommendedDay,
+      currentDay: item.day,
+      isMovedByUser: item.movedByUser,
+      status: item.status,
       whyNow: cp.reason,
     };
   };
 
-  // Plano semanal REAL: distribui as prioridades nos dias úteis (seg–sex),
-  // respeitando a capacidade de cada dia. A usuária pode ajustar depois.
+  // Grade da semana: vem pronta e guardada do App (a mesma da aba Hoje).
+  // Concluir não reembaralha; mover e recalcular passam pelo App.
   const pace = React.useMemo(() => computePace(curriculum ?? [], preferences.weeklyHoursTarget), [curriculum, preferences.weeklyHoursTarget]);
   const recommendedWeek = React.useMemo(() => {
-    // Mesmo plano da aba Hoje: dias passados sem atividade, tempo escolhido
-    // hoje no lugar da capacidade de hoje e foco de módulo das Configurações.
-    const plan = buildCurrentWeekPlan({
-      curriculum: curriculum ?? [],
-      weekDays: days,
-      oslerBlocks,
-      paceFactor: pace.paceFactor,
-      focoModulo: preferences.focoModulo,
-      todayMinutes: todayAvailableMin,
-      hojeISO,
-    });
     const acts: PlanningActivityItem[] = [];
 
     // Osler pendentes: encaixa cada um no dia da semana da sua data agendada
@@ -176,12 +179,10 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
       });
     }
 
-    for (const day of plan) {
-      for (const cp of day.activities) acts.push(cpToPlanning(cp, day.key));
-    }
+    for (const item of weekSchedule?.items ?? []) acts.push(itemToPlanning(item));
     return acts;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [curriculum, oslerBlocks, pace.paceFactor, days, oslerPending, hojeISO, preferences.focoModulo, todayAvailableMin]);
+  }, [curriculum, oslerPending, hojeISO, weekSchedule]);
 
   const [activities, setActivities] = useState<PlanningActivityItem[]>(recommendedWeek);
   React.useEffect(() => {
@@ -270,6 +271,9 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
 
   // Mover atividade de dia (User Override)
   const handleMoveActivity = (activityId: string, newDay: string) => {
+    // Atividade da grade: o App guarda a mudança (sobrevive a recarregar e
+    // aparece também na aba Hoje).
+    if (activityId.startsWith(GRADE_PREFIX)) onMoveWeekItem?.(activityId.slice(GRADE_PREFIX.length), newDay);
     setActivities((prev) =>
       prev.map((item) => {
         if (item.id === activityId) {
@@ -295,6 +299,7 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
   // Marcar atividade como concluída
   const handleCompleteActivity = (actId: string) => {
     const completed = activities.find((a) => a.id === actId);
+    if (actId.startsWith(GRADE_PREFIX)) onCompleteWeekItem?.(actId.slice(GRADE_PREFIX.length));
     setActivities((prev) =>
       prev.map((a) => {
         if (a.id === actId) {
@@ -383,15 +388,27 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
   };
 
   // Recalcular Tudo
+  // (mantém só o que você já concluiu)
   const handleRecalculateAll = () => {
-    setActivities(recommendedWeek);
-    showToast('✨ Algoritmo reorganizou a semana inteira: dependências respeitadas e fila ordenada por eficiência.');
+    onRecalcWeek?.('all');
+    showToast('✨ Semana reorganizada pelo algoritmo. O que você já concluiu ficou onde estava.');
   };
 
-  // Recalcular Restante
+  // Recalcular Restante: refaz de hoje em diante, mantendo concluídas,
+  // atividades que você moveu e dias que já passaram.
   const handleRecalculateRemaining = () => {
-    showToast('✨ Segunda e Terça preservadas. Quarta a Domingo reorganizados conforme sua capacidade.');
+    onRecalcWeek?.('remaining');
+    showToast('✨ Restante da semana reorganizado. Concluídas e atividades que você moveu foram mantidas.');
   };
+
+  // Arrastar e soltar entre dias (visão "Seu Plano Real"). Só recebem atividade
+  // os dias úteis que ainda não passaram — a grade é de segunda a sexta.
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverDay, setDragOverDay] = useState<string | null>(null);
+  const podeArrastar = (act: PlanningActivityItem) =>
+    viewLayer === 'usuario' && act.status !== 'concluido';
+  const podeReceber = (dayKey: string) =>
+    viewLayer === 'usuario' && DAY_KEYS.includes(dayKey) && !diaPassou(dayKey);
 
   // Filtered activities
   const filteredActivities = activities.filter((item) => {
@@ -860,16 +877,39 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                 viewLayer === 'algoritmo' ? a.recommendedDay === day.key : a.currentDay === day.key
               );
               const dayTotalMin = dayActivities.reduce((acc, a) => acc + a.durationMin, 0);
+              const podeSoltar = podeReceber(day.key);
+              const alvoDoArraste = podeSoltar && dragOverDay === day.key;
 
               return (
                 <div
                   key={day.key}
+                  onDragOver={(e) => {
+                    if (!draggingId || !podeSoltar) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (dragOverDay !== day.key) setDragOverDay(day.key);
+                  }}
+                  onDragLeave={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverDay(null);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const id = e.dataTransfer.getData('text/plain') || draggingId;
+                    const act = activities.find((a) => a.id === id);
+                    if (act && podeSoltar && act.currentDay !== day.key) handleMoveActivity(act.id, day.key);
+                    setDraggingId(null);
+                    setDragOverDay(null);
+                  }}
                   className={`bg-surface-container-lowest rounded-3xl p-5 border transition-all shadow-xs space-y-3 flex flex-col justify-between ${
-                    isHoje(day.key)
-                      ? 'border-primary/40 bg-primary/[0.01]'
-                      : diaPassou(day.key)
-                        ? 'border-surface-container opacity-60'
-                        : 'border-surface-container'
+                    alvoDoArraste
+                      ? 'border-primary ring-2 ring-primary/40 bg-primary/[0.04]'
+                      : draggingId && !podeSoltar
+                        ? 'border-surface-container opacity-40'
+                        : isHoje(day.key)
+                          ? 'border-primary/40 bg-primary/[0.01]'
+                          : diaPassou(day.key)
+                            ? 'border-surface-container opacity-60'
+                            : 'border-surface-container'
                   }`}
                 >
                   <div>
@@ -926,17 +966,40 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                             ? '🎯 Aplicação'
                             : '🛠️ Recuperação';
 
+                        const arrastavel = podeArrastar(act);
+
                         return (
                           <div
                             key={act.id}
+                            draggable={arrastavel}
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData('text/plain', act.id);
+                              e.dataTransfer.effectAllowed = 'move';
+                              setDraggingId(act.id);
+                            }}
+                            onDragEnd={() => {
+                              setDraggingId(null);
+                              setDragOverDay(null);
+                            }}
                             className={`p-3.5 rounded-2xl border transition-all space-y-2 group ${
                               act.status === 'concluido'
                                 ? 'bg-surface-container-low/40 border-surface-container opacity-80'
                                 : 'bg-surface-container-low border-surface-container hover:border-primary/40 shadow-2xs'
+                            } ${arrastavel ? 'cursor-grab active:cursor-grabbing' : ''} ${
+                              draggingId === act.id ? 'opacity-40' : ''
                             }`}
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="space-y-1">
+                                {arrastavel && (
+                                  <span
+                                    className="material-symbols-outlined text-[1rem] text-outline float-left -ml-1 mr-0.5 select-none"
+                                    title="Arraste para outro dia"
+                                    aria-hidden="true"
+                                  >
+                                    drag_indicator
+                                  </span>
+                                )}
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                   <span className={`text-[0.625rem] font-bold px-1.5 py-0.5 rounded border ${categoryColor}`}>
                                     {categoryLabel}

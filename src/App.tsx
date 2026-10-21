@@ -3,6 +3,8 @@ import { hojeBR, somarDiasBR } from './utils/dateBR';
 import { ViewPath, StudyActivity, UserPreferences, SessionCompletionReport, CadernoErroItem, EvidenceRecord, OslerBlockRecord } from './types';
 import { upsertBlockRecord } from './utils/retentionEngine';
 import { DEFAULT_WEEK_DAYS } from './utils/planningEngine';
+import { computePace } from './utils/paceEngine';
+import { planWeekSchedule, WeekSchedule, WeekScheduleItem } from './utils/weekPlan';
 import { DayCapacityConfig } from './types';
 import { initialActivities, initialPreferences, initialCadernoErros, fullCurriculumHierarchy } from './data/mockData';
 import { buildStudiedCurriculum } from './utils/studiedProgress';
@@ -319,6 +321,60 @@ export default function App() {
     [activities, manualStudiedContentIds, oslerBlocks]
   );
 
+  // ============================================================
+  // GRADE DA SEMANA (Hoje e Planejamento leem daqui). Guardada: concluir uma
+  // atividade não reembaralha a semana. Ver src/utils/weekPlan.ts.
+  // ============================================================
+  const [weekSchedule, setWeekSchedule] = useState<WeekSchedule | null>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('synapsemed_week_schedule') || 'null');
+      return saved && typeof saved.week === 'string' && Array.isArray(saved.items) ? saved : null;
+    } catch {
+      return null;
+    }
+  });
+  const paceFactor = useMemo(
+    () => computePace(studiedCurriculum, preferences.weeklyHoursTarget).paceFactor,
+    [studiedCurriculum, preferences.weeklyHoursTarget]
+  );
+  const weekScheduleInput = {
+    curriculum: studiedCurriculum,
+    weekDays,
+    oslerBlocks,
+    paceFactor,
+    focoModulo: preferences.focoModulo,
+    todayMinutes: todayAvailableMin,
+  };
+  // Monta a grade da semana nova ou refaz o restante quando muda uma escolha
+  // sua (tempo de hoje, capacidade dos dias, foco). Concluir não dispara nada.
+  useEffect(() => {
+    const next = planWeekSchedule(weekSchedule, weekScheduleInput);
+    if (next !== weekSchedule) setWeekSchedule(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekSchedule, weekDays, preferences.focoModulo, todayAvailableMin]);
+
+  useEffect(() => {
+    if (weekSchedule) localStorage.setItem('synapsemed_week_schedule', JSON.stringify(weekSchedule));
+  }, [weekSchedule]);
+
+  const updateWeekItems = (fn: (it: WeekScheduleItem) => WeekScheduleItem) =>
+    setWeekSchedule((prev) => (prev ? { ...prev, items: prev.items.map(fn) } : prev));
+
+  const handleMoveWeekItem = (itemId: string, day: string) =>
+    updateWeekItems((it) => (it.id === itemId ? { ...it, day, movedByUser: day !== it.recommendedDay } : it));
+
+  const handleCompleteWeekItem = (itemId: string) =>
+    updateWeekItems((it) => (it.id === itemId ? { ...it, status: 'concluido' } : it));
+
+  // Conclusão vinda da aba Hoje (só sabe o conteúdo): marca a atividade dele na grade.
+  const handleCompleteWeekContent = (contentId: string) =>
+    updateWeekItems((it) =>
+      it.cp.contentId === contentId && it.status === 'pendente' ? { ...it, status: 'concluido' } : it
+    );
+
+  const handleRecalcWeek = (mode: 'remaining' | 'all') =>
+    setWeekSchedule((prev) => planWeekSchedule(prev, weekScheduleInput, mode));
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3800);
@@ -464,6 +520,7 @@ export default function App() {
       localStorage.removeItem('synapsemed_week_days');
       localStorage.removeItem('synapsemed_weekly_completed_minutes');
       localStorage.removeItem('synapsemed_today_available');
+      localStorage.removeItem('synapsemed_week_schedule');
       localStorage.setItem('synapsemed_storage_version', CURRENT_STORAGE_VERSION);
     }
     setActivities(initialActivities);
@@ -474,6 +531,8 @@ export default function App() {
     setOslerBlocks([]);
     setOslerPending([]);
     setWeekDays(DEFAULT_WEEK_DAYS);
+    setTodayAvailable(null);
+    setWeekSchedule(null);
     setCurrentPath('hoje');
     showToast('Ambiente restaurado para o início dos estudos (0% concluído).');
   };
@@ -572,6 +631,8 @@ export default function App() {
               weekDays={weekDays}
               todayAvailableMin={todayAvailableMin}
               onChangeTodayAvailable={(minutes) => setTodayAvailable({ date: hojeBR(), minutes })}
+              weekSchedule={weekSchedule}
+              onCompleteWeekContent={handleCompleteWeekContent}
             />
           )}
 
@@ -586,6 +647,10 @@ export default function App() {
               onChangeWeekDays={setWeekDays}
               oslerPending={oslerPending}
               todayAvailableMin={todayAvailableMin}
+              weekSchedule={weekSchedule}
+              onMoveWeekItem={handleMoveWeekItem}
+              onCompleteWeekItem={handleCompleteWeekItem}
+              onRecalcWeek={handleRecalcWeek}
             />
           )}
 

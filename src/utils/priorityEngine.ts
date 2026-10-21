@@ -228,7 +228,9 @@ export function buildWeeklyPlan(
   days: { key: string; label: string; capacityMin: number }[],
   oslerBlocks: readonly OslerBlockRecord[] = [],
   paceFactor = 0,
-  focoModulo?: string
+  focoModulo?: string,
+  /** Conteúdos que já estão na semana (concluídos ou fixados) e não entram de novo. */
+  excludeContentIds: Iterable<string> = []
 ): WeekDayPlan[] {
   const ranked = rankContentsByPriority(hierarchy, oslerBlocks, paceFactor, focoModulo)
     .filter((c) => c.priorityScore > 0);
@@ -237,7 +239,7 @@ export function buildWeeklyPlan(
     key: d.key, label: d.label, capacityMin: d.capacityMin, activities: [], usedMin: 0,
   }));
 
-  const usedContentIds = new Set<string>();
+  const usedContentIds = new Set<string>(excludeContentIds);
   const moduleCountWeek: Record<string, number> = {};
   // distribui em rodadas: em cada rodada, tenta pôr 1 atividade por dia.
   // Na escolha, entre os candidatos que cabem e respeitam variedade no dia,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { chaveDiaSemanaBR, hojeBR, segundaDaSemanaBR } from '../utils/dateBR';
-import { buildCurrentWeekPlan, WEEKDAY_KEYS } from '../utils/weekPlan';
+import { WEEKDAY_KEYS, WeekSchedule } from '../utils/weekPlan';
 import { UserPreferences, ErrorReasonType, ContentItem, AreaItem, OslerBlockRecord, DayCapacityConfig } from '../types';
 import { getContentState } from '../utils/contentState';
 import { buildTodayPlan, rankContentsByPriority, ContentPriority, ActivityKind } from '../utils/priorityEngine';
@@ -74,6 +74,10 @@ interface HojeViewProps {
   /** Tempo escolhido para hoje (fonte no App); null = usa a sugestão da semana. */
   todayAvailableMin?: number | null;
   onChangeTodayAvailable?: (minutes: number) => void;
+  /** Grade da semana guardada no App (a mesma do Planejamento). */
+  weekSchedule?: WeekSchedule | null;
+  /** Marca na grade a atividade do conteúdo concluído aqui. */
+  onCompleteWeekContent?: (contentId: string) => void;
 }
 
 export const HojeView: React.FC<HojeViewProps> = ({
@@ -90,6 +94,8 @@ export const HojeView: React.FC<HojeViewProps> = ({
   onNavigateToRevisoes,
   todayAvailableMin = null,
   onChangeTodayAvailable,
+  weekSchedule = null,
+  onCompleteWeekContent,
 }) => {
   // Fatia de hoje sugerida a partir da semana: capacidade do dia de hoje, ou
   // média dos dias com capacidade > 0 (dias de descanso não entram).
@@ -153,25 +159,21 @@ export const HojeView: React.FC<HojeViewProps> = ({
   // Ritmo/prazo (meta dez/2028): informa a pressão de prazo p/ o motor.
   const pace = React.useMemo(() => computePace(curriculum ?? [], preferences.weeklyHoursTarget), [curriculum, preferences.weeklyHoursTarget]);
 
-  // Plano de hoje = o dia de hoje no plano da semana (o mesmo do Planejamento).
-  // Fim de semana ou dia útil sem capacidade e sem tempo escolhido: o
-  // Planejamento não tem nada para hoje, então o Hoje sugere pela prioridade.
+  // Plano de hoje = o que está pendente para hoje na grade da semana (a mesma
+  // do Planejamento, guardada no App). Fim de semana ou dia útil sem capacidade
+  // e sem tempo escolhido: a grade não tem nada para hoje, então o Hoje sugere
+  // pela prioridade.
   const recommendedPlan = React.useMemo(() => {
     const todayKey = chaveDiaSemanaBR();
     const todayCapacity = weekDays?.find((d) => d.key === todayKey)?.capacityMin ?? 0;
     const inWeekPlan = WEEKDAY_KEYS.includes(todayKey) && (todayAvailableMin != null || todayCapacity > 0);
     const plan = inWeekPlan
-      ? buildCurrentWeekPlan({
-          curriculum: curriculum ?? [],
-          weekDays: weekDays ?? [],
-          oslerBlocks,
-          paceFactor: pace.paceFactor,
-          focoModulo: preferences.focoModulo,
-          todayMinutes: todayAvailableMin,
-        }).find((d) => d.key === todayKey)?.activities ?? []
+      ? (weekSchedule?.items ?? [])
+          .filter((it) => it.day === todayKey && it.status === 'pendente')
+          .map((it) => it.cp)
       : buildTodayPlan(curriculum ?? [], availableTodayMin, 2, oslerBlocks, pace.paceFactor, preferences.focoModulo);
     return planToActivities(plan);
-  }, [curriculum, weekDays, todayAvailableMin, availableTodayMin, oslerBlocks, pace.paceFactor, preferences.focoModulo]);
+  }, [curriculum, weekDays, weekSchedule, todayAvailableMin, availableTodayMin, oslerBlocks, pace.paceFactor, preferences.focoModulo]);
 
   // 1º Osler pendente cuja data já chegou -> vira atividade de revisão no topo.
   const oslerPendingActivities: ActivityItem[] = React.useMemo(() => {
@@ -343,6 +345,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
     setCompletedMinutes((prev) => prev + activity.durationMin);
     setActivities((prev) => prev.filter((a) => a.id !== activity.id));
     onContentStudied?.(activity.contentId);
+    if (activity.contentId) onCompleteWeekContent?.(activity.contentId);
     showToast(
       `✓ Atividade "${activity.name}" concluída! Progresso registrado.`
     );
@@ -373,6 +376,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
     });
     setCompletedMinutes((prev) => prev + (Math.round(sessionTimerSeconds / 60) || finishTimeMinutes));
     setActivities((prev) => prev.filter((a) => a.id !== activeStudySession.id));
+    if (activeStudySession.contentId) onCompleteWeekContent?.(activeStudySession.contentId);
     setShowFinishModal(false);
     setActiveStudySession(null);
     setIsTimerRunning(false);
