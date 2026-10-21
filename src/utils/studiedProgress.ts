@@ -24,7 +24,7 @@
 // Tudo aqui é puro e não muta a hierarquia original importada.
 // ============================================================================
 
-import { AreaItem, ModuleItem, ContentItem, StudyActivity, OslerBlockRecord, OslerCardDistribution } from '../types';
+import { AreaItem, ModuleItem, ContentItem, StudyActivity, OslerBlockRecord, OslerCardDistribution, EvidenceRecord } from '../types';
 import { getStateTotals, getContentState } from './contentState';
 import { contentRetention } from './retentionEngine';
 
@@ -90,19 +90,59 @@ function deriveLastStudiedDates(
  *   - Contadores `studiedContents` de módulo e área são recomputados a partir
  *     dos conteúdos já sobrepostos (mantém a barra de progresso coerente).
  */
+/** Exercícios Medway registrados por conteúdo (somados entre sessões). */
+interface ExerciseTally { total: number; correct: number; date: string }
+interface MedwayExercises { pre?: ExerciseTally; post?: ExerciseTally; lastDate: string }
+
+const exerciseStats = (t: ExerciseTally, totalAvailable = 0) => ({
+  totalAvailable: Math.max(totalAvailable, t.total),
+  completedCount: t.total,
+  correctCount: t.correct,
+  accuracy: t.total > 0 ? Math.round((t.correct / t.total) * 100) : 0,
+  date: t.date,
+});
+
+/**
+ * Agrega as evidências de exercícios pré/pós-teoria (registradas na aba Hoje)
+ * por conteúdo. Identifica pelo `source`, como a aba Histórico.
+ */
+function aggregateMedwayExercises(evidenceLog: readonly EvidenceRecord[]): Map<string, MedwayExercises> {
+  const out = new Map<string, MedwayExercises>();
+  for (const ev of evidenceLog) {
+    const source = ev.source?.toLowerCase() ?? '';
+    if (!ev.contentId || !source.includes('teoria')) continue;
+    const phase = source.includes('pré') ? 'pre' : source.includes('pós') ? 'post' : null;
+    if (!phase || !(ev.questionsTotal && ev.questionsTotal > 0)) continue;
+    const entry = out.get(ev.contentId) ?? { lastDate: ev.date };
+    const prev = entry[phase] ?? { total: 0, correct: 0, date: ev.date };
+    entry[phase] = {
+      total: prev.total + ev.questionsTotal,
+      correct: prev.correct + (ev.questionsCorrect ?? 0),
+      date: ev.date > prev.date ? ev.date : prev.date,
+    };
+    if (ev.date > entry.lastDate) entry.lastDate = ev.date;
+    out.set(ev.contentId, entry);
+  }
+  return out;
+}
+
 export function applyStudiedOverlay(
   hierarchy: readonly AreaItem[],
   studiedContentIds: ReadonlySet<string>,
   lastStudiedDates?: ReadonlyMap<string, string>,
-  retentionByContent?: ReadonlyMap<string, { retention: number; distribution: OslerCardDistribution }>
+  retentionByContent?: ReadonlyMap<string, { retention: number; distribution: OslerCardDistribution }>,
+  exercisesByContent?: ReadonlyMap<string, MedwayExercises>
 ): AreaItem[] {
   return hierarchy.map((area) => {
     const modules: ModuleItem[] = area.modules.map((mod) => {
       const contents: ContentItem[] = mod.contents.map((content) => {
         const ret = retentionByContent?.get(content.id);
-        const isStudied = studiedContentIds.has(content.id) || !!ret;
+        const ex = exercisesByContent?.get(content.id);
+        const isStudied = studiedContentIds.has(content.id) || !!ret || !!ex;
         if (!isStudied) return content;
-        const lastDate = lastStudiedDates?.get(content.id);
+        const lastDate = lastStudiedDates?.get(content.id) ?? ex?.lastDate;
+        const pre = ex?.pre ? exerciseStats(ex.pre, content.preVideoQuestions?.totalAvailable) : null;
+        const post = ex?.post ? exerciseStats(ex.post, content.postVideoQuestions?.totalAvailable) : null;
         const overlaid: ContentItem = {
           ...content,
           isStudied: true,
@@ -113,6 +153,11 @@ export function applyStudiedOverlay(
           ...(ret
             ? { oslerCards: { distribution: ret.distribution, retentionRate: ret.retention } }
             : {}),
+          // Liga os exercícios pré/pós registrados (aba Hoje) ao Currículo, ao
+          // Dossiê e ao CONHECIMENTO do domínio (domainCalculator lê o pós).
+          ...(pre ? { preVideoQuestions: pre } : {}),
+          ...(post ? { postVideoQuestions: { ...post, completionRate: 100 } } : {}),
+          ...(pre && post ? { learningGainPP: Number((post.accuracy - pre.accuracy).toFixed(1)) } : {}),
         };
         return overlaid;
       });
@@ -160,7 +205,8 @@ export function buildStudiedCurriculum(
   baseHierarchy: readonly AreaItem[],
   activities: readonly StudyActivity[],
   extraStudiedContentIds?: readonly string[],
-  oslerBlocks?: readonly OslerBlockRecord[]
+  oslerBlocks?: readonly OslerBlockRecord[],
+  evidenceLog?: readonly EvidenceRecord[]
 ): { curriculum: AreaItem[]; studiedContentIds: Set<string> } {
   const studiedContentIds = deriveStudiedContentIds(activities);
   // Conteúdos marcados como concluídos por telas com modelo próprio
@@ -176,11 +222,16 @@ export function buildStudiedCurriculum(
     ? aggregateRetentionByContent(oslerBlocks)
     : undefined;
   const lastStudiedDates = deriveLastStudiedDates(activities);
+  const exercisesByContent = evidenceLog && evidenceLog.length
+    ? aggregateMedwayExercises(evidenceLog)
+    : undefined;
+  for (const id of exercisesByContent?.keys() ?? []) studiedContentIds.add(id);
   const curriculum = applyStudiedOverlay(
     baseHierarchy,
     studiedContentIds,
     lastStudiedDates,
-    retentionByContent
+    retentionByContent,
+    exercisesByContent
   );
   return { curriculum, studiedContentIds };
 }

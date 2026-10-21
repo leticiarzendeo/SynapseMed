@@ -317,8 +317,8 @@ export default function App() {
   // domainCalculator e priorização.
   // ============================================================
   const { curriculum: studiedCurriculum, studiedContentIds } = useMemo(
-    () => buildStudiedCurriculum(fullCurriculumHierarchy, activities, manualStudiedContentIds, oslerBlocks),
-    [activities, manualStudiedContentIds, oslerBlocks]
+    () => buildStudiedCurriculum(fullCurriculumHierarchy, activities, manualStudiedContentIds, oslerBlocks, evidenceLog),
+    [activities, manualStudiedContentIds, oslerBlocks, evidenceLog]
   );
 
   // ============================================================
