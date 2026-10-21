@@ -9,6 +9,11 @@
 // Tabaco e Outras Substâncias", conteúdo removido do currículo por não ter
 // flashcards Osler correspondentes (decisão da usuária) — por isso ficou de fora.
 //
+// Conteúdos que existem em dois módulos (ex.: "Diabetes" em Clínica Médica e
+// em Pediatria, id com sufixo "-2"): cada foco aponta para a cópia do módulo da
+// sua área na Medway. Se não há cópia no módulo da área (ex.: Anemias em
+// Pediatria), aponta para o conteúdo de mesmo nome no outro módulo.
+//
 // Totais prioritários por instituição (tela da Medway): Einstein 67, ENAMED 52,
 // UNICAMP 77, USP-RP 75, USP-SP 68.
 // ============================================================================
@@ -122,18 +127,18 @@ export const medwayPriorityFocos: MedwayPriorityFoco[] = [
   { area: "Medicina Preventiva e Social", tema: "Vigilância em Saúde", foco: "Epidemias, Endemias e Pandemias", contentId: "c-epidemias-endemias-e-pandemias" },
   { area: "Medicina Preventiva e Social", tema: "Vigilância em Saúde", foco: "Vigilância em saúde do trabalhador", contentId: "c-vigilancia-em-saude-do-trabalhador" },
   { area: "Pediatria", tema: "Alergologia e Imunologia", foco: "Desordens do Sistema Imune", contentId: "c-desordens-do-sistema-imune" },
-  { area: "Pediatria", tema: "Cardiologia", foco: "Arritmias, Síncope e PCR", contentId: "c-arritmias-sincope-e-pcr" },
+  { area: "Pediatria", tema: "Cardiologia", foco: "Arritmias, Síncope e PCR", contentId: "c-arritmias-sincope-e-pcr-2" },
   { area: "Pediatria", tema: "Cardiologia", foco: "Cardiopatias Congênitas", contentId: "c-cardiopatias-congenitas" },
   { area: "Pediatria", tema: "Cirurgia Pediátrica", foco: "Cirurgia pediátrica", contentId: "c-cirurgia-pediatrica" },
-  { area: "Pediatria", tema: "Endocrinologia", foco: "Diabetes", contentId: "c-diabetes" },
+  { area: "Pediatria", tema: "Endocrinologia", foco: "Diabetes", contentId: "c-diabetes-2" },
   { area: "Pediatria", tema: "Gastroenterologia", foco: "Síndromes Diarreicas e Disabsortivas", contentId: "c-sindromes-diarreicas-e-absortivas" },
   { area: "Pediatria", tema: "Infectologia", foco: "Doenças Exantemáticas", contentId: "c-doencas-exantematicas" },
   { area: "Pediatria", tema: "Infectologia", foco: "Imunizações", contentId: "c-imunizacoes" },
   { area: "Pediatria", tema: "Infectologia", foco: "Infecção do Trato Urinário (ITU)", contentId: "c-infeccao-do-trato-urinario" },
-  { area: "Pediatria", tema: "Infectologia", foco: "Pneumonias e Síndromes Gripais", contentId: "c-pneumonias-e-sindromes-gripais" },
-  { area: "Pediatria", tema: "Infectologia", foco: "Síndromes Febris", contentId: "c-sindromes-febris" },
+  { area: "Pediatria", tema: "Infectologia", foco: "Pneumonias e Síndromes Gripais", contentId: "c-pneumonias-e-sindromes-gripais-2" },
+  { area: "Pediatria", tema: "Infectologia", foco: "Síndromes Febris", contentId: "c-sindromes-febris-2" },
   { area: "Pediatria", tema: "Nefrologia", foco: "Distúrbios Hidroeletrolíticos e Acidobásicos", contentId: "c-disturbios-hidroeletroliticos-e-acidos-basicos" },
-  { area: "Pediatria", tema: "Nefrologia", foco: "Glomerulopatias e Tubulopatias", contentId: "c-glomerulopatias-e-tubulopatias" },
+  { area: "Pediatria", tema: "Nefrologia", foco: "Glomerulopatias e Tubulopatias", contentId: "c-glomerulopatias-e-tubulopatias-2" },
   { area: "Pediatria", tema: "Neonatologia", foco: "Alojamento Conjunto e Testes de Triagem Neonatal", contentId: "c-alojamento-conjunto-e-teste-de-triagem-neonatal" },
   { area: "Pediatria", tema: "Neonatologia", foco: "Período Neonatal: Doenças Hematológicas", contentId: "c-periodo-neonatal-doencas-hematologicas" },
   { area: "Pediatria", tema: "Neonatologia", foco: "Período Neonatal: Doenças Infecciosas", contentId: "c-periodo-neonatal-doencas-infecciosas" },
@@ -145,13 +150,13 @@ export const medwayPriorityFocos: MedwayPriorityFoco[] = [
   { area: "Pediatria", tema: "Oncologia e Hematologia", foco: "Distúrbios da Hemostasia, Desordens Trombóticas e Transfusão de Hemocomponentes", contentId: "c-disturbios-da-hemostasia-desordens-tromboticas-e-transfusao-de-hemocomponentes" },
   { area: "Pediatria", tema: "Ortopedia", foco: "Ortopedia Pediátrica", contentId: "c-ortopedia-pediatrica" },
   { area: "Pediatria", tema: "Otorrinolaringologia", foco: "Nariz, Ouvido e Laringe", contentId: "c-nariz-ouvido-e-laringe" },
-  { area: "Pediatria", tema: "Pneumologia", foco: "Distúrbios Obstrutivos", contentId: "c-disturbios-obstrutivos" },
+  { area: "Pediatria", tema: "Pneumologia", foco: "Distúrbios Obstrutivos", contentId: "c-disturbios-obstrutivos-2" },
   { area: "Pediatria", tema: "Puericultura", foco: "Avaliação e Transtornos do Comportamento na Infância e Adolescência", contentId: "c-avaliacao-dos-transtornos-do-comportamento-na-infancia-e-adolescencia" },
   { area: "Pediatria", tema: "Puericultura", foco: "Crescimento e Desenvolvimento na Infância e Adolescência", contentId: "c-crescimento-e-desenvolvimento-na-infancia-e-adolescencia" },
   { area: "Pediatria", tema: "Puericultura", foco: "Distúrbios Estaturais e Puberais", contentId: "c-disturbios-estaturais-e-puberais" },
   { area: "Pediatria", tema: "Puericultura", foco: "Segurança e Violência na Infância", contentId: "c-seguranca-e-violencia-na-infancia" },
-  { area: "Pediatria", tema: "Reumatologia", foco: "Vasculites", contentId: "c-vasculites" },
-  { area: "Pediatria", tema: "Terapia Intensiva", foco: "Sepse, Choque Séptico e Outros tipos de Choque", contentId: "c-sepse-choque-septico-e-outros-tipos-de-choque" },
+  { area: "Pediatria", tema: "Reumatologia", foco: "Vasculites", contentId: "c-vasculites-2" },
+  { area: "Pediatria", tema: "Terapia Intensiva", foco: "Sepse, Choque Séptico e Outros tipos de Choque", contentId: "c-sepse-choque-septico-e-outros-tipos-de-choque-2" },
   { area: "Pediatria", tema: "Toxicologia e Farmacologia", foco: "Intoxicações Exógenas e Acidentes por Animais Peçonhentos", contentId: "c-intoxicacoes-exogenas-e-acidentes-por-animais-peconhentos" },
 ];
 
