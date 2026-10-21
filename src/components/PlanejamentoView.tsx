@@ -790,81 +790,99 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
           </section>
 
           {/* BARRA DE CONTROLES: CAMADA DUPLA (ALGORITMO VS USUÁRIO) & FILTROS & AÇÕES */}
-          <section className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-surface-container-low/60 p-3 rounded-2xl border border-surface-container">
+          <section className="flex flex-wrap items-center gap-x-4 gap-y-3 bg-surface-container-lowest p-3 sm:p-4 rounded-3xl border border-surface-container shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
             {/* Alternador Camada Dupla */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center p-1 bg-surface-container rounded-xl text-xs font-bold">
-                <button
-                  onClick={() => setViewLayer('usuario')}
-                  className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1 ${
-                    viewLayer === 'usuario'
-                      ? 'bg-surface-container-lowest text-on-surface shadow-xs font-black'
-                      : 'text-secondary hover:text-on-surface'
-                  }`}
-                >
-                  <span>👤</span>
-                  <span>Seu Plano Real</span>
-                </button>
-                <button
-                  onClick={() => setViewLayer('algoritmo')}
-                  className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1 ${
-                    viewLayer === 'algoritmo'
-                      ? 'bg-surface-container-lowest text-primary shadow-xs font-black'
-                      : 'text-secondary hover:text-on-surface'
-                  }`}
-                >
-                  <span>🤖</span>
-                  <span>Sugestão do Algoritmo</span>
-                </button>
-              </div>
-
-              {/* Filtros de Categoria (2 linhas, visíveis) */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                {[
-                  { key: 'todas', label: 'Todas' },
-                  { key: 'avanco', label: '🆕 Avanço' },
-                  { key: 'manutencao', label: '🔄 Manutenção' },
-                  { key: 'aplicacao', label: '🎯 Aplicação' },
-                  { key: 'recuperacao', label: '🛠️ Recuperação' },
-                ].map((f) => (
+            <div className="flex items-center gap-2 shrink-0">
+              {(
+                [
+                  { key: 'usuario', icon: 'person', label: 'Seu Plano Real' },
+                  { key: 'algoritmo', icon: 'calendar_today', label: 'Sugestão do Algoritmo' },
+                ] as const
+              ).map((m) => {
+                const ativo = viewLayer === m.key;
+                return (
                   <button
-                    key={f.key}
-                    onClick={() => setActiveFilter(f.key as any)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
-                      activeFilter === f.key
-                        ? 'bg-surface-container-lowest text-on-surface shadow-xs font-bold'
-                        : 'text-secondary hover:text-on-surface'
+                    key={m.key}
+                    onClick={() => setViewLayer(m.key)}
+                    className={`relative overflow-hidden flex items-center gap-2.5 pl-3 pr-4 py-2 rounded-2xl border text-sm leading-tight text-left transition-all max-w-[11rem] ${
+                      ativo
+                        ? 'bg-violet-50 border-violet-200 text-on-surface font-bold shadow-xs'
+                        : 'bg-surface-container-low border-transparent text-secondary font-medium hover:text-on-surface hover:bg-surface-container'
                     }`}
                   >
-                    {f.label}
+                    {ativo && <span className="absolute left-0 top-0 bottom-0 w-1 bg-violet-600" aria-hidden="true" />}
+                    <span
+                      className={`material-symbols-outlined text-[1.25rem] shrink-0 ${ativo ? 'text-violet-700' : ''}`}
+                      style={ativo ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                    >
+                      {m.icon}
+                    </span>
+                    <span>{m.label}</span>
                   </button>
-                ))}
-              </div>
+                );
+              })}
+            </div>
+
+            <div className="hidden sm:block w-px self-stretch bg-surface-container" aria-hidden="true" />
+
+            {/* Filtros de Categoria */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-1 gap-y-1">
+              {(
+                [
+                  { key: 'todas', label: 'Todas', icon: null, color: '' },
+                  { key: 'avanco', label: 'Avanço', icon: 'calendar_month', color: 'text-secondary' },
+                  { key: 'manutencao', label: 'Manutenção', icon: 'build', color: 'text-secondary' },
+                  { key: 'aplicacao', label: 'Aplicação', icon: 'track_changes', color: 'text-fuchsia-600' },
+                  { key: 'recuperacao', label: 'Recuperação', icon: 'ecg_heart', color: 'text-pink-600' },
+                ] as const
+              ).map((fl) => {
+                const ativo = activeFilter === fl.key;
+                return (
+                  <button
+                    key={fl.key}
+                    onClick={() => setActiveFilter(fl.key as any)}
+                    className={`px-3.5 py-1.5 rounded-full text-sm whitespace-nowrap flex items-center gap-1.5 transition-all ${
+                      ativo
+                        ? 'bg-violet-100 text-violet-800 font-bold'
+                        : 'text-secondary font-medium hover:text-on-surface hover:bg-surface-container-low'
+                    }`}
+                  >
+                    {fl.icon && (
+                      <span className={`material-symbols-outlined text-[1.15rem] ${ativo ? '' : fl.color}`}>{fl.icon}</span>
+                    )}
+                    <span>{fl.label}</span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Ações de Replanejamento */}
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-wrap items-center gap-2 ml-auto">
               <button
                 onClick={() => setShowAnteciparModal(true)}
-                className="px-3 py-1.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container border border-surface-container text-xs font-semibold text-on-surface flex items-center gap-1 shadow-xs"
+                className="px-4 py-2 rounded-full border border-violet-200 bg-violet-50/60 hover:bg-violet-100 text-violet-800 text-sm font-bold flex items-center gap-1.5 transition-all"
               >
-                <span>➕</span>
+                <span className="material-symbols-outlined text-[1.2rem]">add</span>
                 <span>Adiantar Conteúdo</span>
               </button>
               <button
                 onClick={handleRecalculateRemaining}
-                className="px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold flex items-center gap-1"
-                title="Preserva segunda e terça e recalcula de quarta a domingo"
+                className="px-4 py-2 rounded-full border border-lime-200 bg-lime-50 hover:bg-lime-100 text-lime-900 text-sm font-bold flex items-center gap-1.5 transition-all"
+                title="Refaz de hoje em diante, mantendo concluídas, atividades que você moveu e dias passados"
               >
-                <span>✨</span>
+                <span className="material-symbols-outlined text-[1.2rem] text-amber-500" style={{ fontVariationSettings: "'FILL' 1" }}>
+                  auto_awesome
+                </span>
                 <span>Recalcular Restante</span>
               </button>
               <button
                 onClick={handleRecalculateAll}
-                className="px-3.5 py-1.5 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary-container transition-all shadow-xs"
-                title="Reorganiza toda a semana com distribuição ótima"
+                className="px-4 py-2 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-bold flex items-center gap-1.5 shadow-sm transition-all"
+                title="Refaz a semana inteira, mantendo só o que você já concluiu"
               >
-                <span>✨</span>
+                <span className="material-symbols-outlined text-[1.2rem] text-yellow-300" style={{ fontVariationSettings: "'FILL' 1" }}>
+                  bolt
+                </span>
                 <span>Recalcular Tudo</span>
               </button>
             </div>
@@ -948,25 +966,18 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                     {/* Lista de Atividades do Dia */}
                     <div className="space-y-2.5 pt-3">
                       {dayActivities.map((act) => {
-                        const categoryColor =
-                          act.category === 'avanco'
-                            ? 'bg-blue-50 text-blue-800 border-blue-200'
-                            : act.category === 'manutencao'
-                            ? 'bg-purple-50 text-purple-800 border-purple-200'
-                            : act.category === 'aplicacao'
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                            : 'bg-amber-50 text-amber-800 border-amber-200';
-
-                        const categoryLabel =
-                          act.category === 'avanco'
-                            ? '🆕 Avanço'
-                            : act.category === 'manutencao'
-                            ? '🔄 Manutenção'
-                            : act.category === 'aplicacao'
-                            ? '🎯 Aplicação'
-                            : '🛠️ Recuperação';
-
+                        const CATEGORIA_UI: Record<string, { label: string; icon: string; chip: string }> = {
+                          avanco: { label: 'Avanço', icon: 'menu_book', chip: 'bg-blue-50 text-blue-700 border-blue-100' },
+                          manutencao: { label: 'Manutenção', icon: 'build', chip: 'bg-violet-50 text-violet-700 border-violet-100' },
+                          aplicacao: { label: 'Aplicação', icon: 'track_changes', chip: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-100' },
+                          recuperacao: { label: 'Recuperação', icon: 'ecg_heart', chip: 'bg-pink-50 text-pink-700 border-pink-100' },
+                        };
+                        const cat = CATEGORIA_UI[act.category] ?? CATEGORIA_UI.avanco;
+                        const feito = act.status === 'concluido';
                         const arrastavel = podeArrastar(act);
+                        const botaoSecundario =
+                          'rounded-2xl border border-surface-container bg-surface-container-lowest hover:bg-surface-container-low text-secondary hover:text-on-surface text-xs font-semibold flex flex-col items-center justify-center gap-1 py-2.5 px-2 transition-all';
+                        const preenchido = { fontVariationSettings: "'FILL' 1" };
 
                         return (
                           <div
@@ -981,132 +992,164 @@ export const PlanejamentoView: React.FC<PlanejamentoViewProps> = ({
                               setDraggingId(null);
                               setDragOverDay(null);
                             }}
-                            className={`p-3.5 rounded-2xl border transition-all space-y-2 group ${
-                              act.status === 'concluido'
-                                ? 'bg-surface-container-low/40 border-surface-container opacity-80'
-                                : 'bg-surface-container-low border-surface-container hover:border-primary/40 shadow-2xs'
+                            className={`@container p-4 rounded-3xl border bg-surface-container-lowest space-y-3 transition-all shadow-[0_2px_14px_rgba(0,0,0,0.05)] ${
+                              feito ? 'border-surface-container opacity-70' : 'border-surface-container hover:border-violet-200'
                             } ${arrastavel ? 'cursor-grab active:cursor-grabbing' : ''} ${
                               draggingId === act.id ? 'opacity-40' : ''
                             }`}
                           >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="space-y-1">
-                                {arrastavel && (
-                                  <span
-                                    className="material-symbols-outlined text-[1rem] text-outline float-left -ml-1 mr-0.5 select-none"
-                                    title="Arraste para outro dia"
-                                    aria-hidden="true"
-                                  >
-                                    drag_indicator
-                                  </span>
-                                )}
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className={`text-[0.625rem] font-bold px-1.5 py-0.5 rounded border ${categoryColor}`}>
-                                    {categoryLabel}
-                                  </span>
-                                  <span className="text-xs font-black text-on-surface">{act.name}</span>
-                                  <span className="text-xs text-secondary">• {act.subType}</span>
-                                </div>
-                                <span className="text-[0.6875rem] text-secondary block">
-                                  🏷️ {act.modulo} ({act.specialty})
-                                </span>
-                              </div>
-
-                              {/* Duração & Prioridade */}
-                              <div className="text-right shrink-0">
-                                <span className="font-code-metric text-xs font-black text-on-surface block">
-                                  {act.durationMin} min
-                                </span>
+                            {/* Topo: alça, categoria, eficiência e duração */}
+                            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                              {arrastavel && (
                                 <span
-                                  className="text-[0.625rem] font-bold text-primary font-code-metric block"
-                                  title={`Eficiência da atividade: Benefício (${act.priorityScore} pts) ÷ Tempo (${act.durationMin} min) = ${act.efficiencyPointsPerMin} pts/min`}
+                                  className="material-symbols-outlined text-[1.25rem] text-outline select-none -ml-1"
+                                  title="Arraste para outro dia"
+                                  aria-hidden="true"
                                 >
-                                  ⚡ {act.efficiencyPointsPerMin} pts/m
+                                  drag_indicator
                                 </span>
+                              )}
+                              <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-xl border text-xs font-bold ${cat.chip}`}>
+                                <span className="material-symbols-outlined text-[1rem]" style={preenchido}>
+                                  {cat.icon}
+                                </span>
+                                {cat.label}
+                              </span>
+                              <span
+                                className="ml-auto inline-flex items-center gap-0.5 text-xs font-bold text-emerald-700 font-code-metric whitespace-nowrap"
+                                title={`Eficiência: benefício (${act.priorityScore} pts) ÷ tempo (${act.durationMin} min)`}
+                              >
+                                <span className="material-symbols-outlined text-[1rem] text-orange-500" style={preenchido}>
+                                  bolt
+                                </span>
+                                {Number(act.efficiencyPointsPerMin).toFixed(2)}
+                                <span className="hidden @[24rem]:inline">&nbsp;pts/m</span>
+                              </span>
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-surface-container-low text-xs font-bold text-on-surface whitespace-nowrap">
+                                <span className="material-symbols-outlined text-[1rem] text-emerald-700">schedule</span>
+                                {act.durationMin} min
+                              </span>
+                            </div>
+
+                            {/* Título e módulo */}
+                            <div className="flex flex-col @[26rem]:flex-row @[26rem]:items-start gap-3">
+                              <div className="flex-1 min-w-0">
+                                <h3
+                                  className={`text-base font-black text-on-surface leading-snug tracking-tight ${
+                                    feito ? 'line-through decoration-2 decoration-emerald-600/60' : ''
+                                  }`}
+                                >
+                                  {act.name}
+                                </h3>
+                                <span className="text-sm text-secondary">• {act.subType}</span>
+                              </div>
+                              <div className="flex items-start gap-2 rounded-2xl bg-emerald-50 border border-emerald-100 px-3 py-2 @[26rem]:max-w-[48%]">
+                                <span className="material-symbols-outlined text-[1.1rem] text-emerald-600 mt-px" style={preenchido}>
+                                  sell
+                                </span>
+                                <div className="min-w-0 leading-tight">
+                                  <span className="block text-xs font-bold text-emerald-900">{act.modulo}</span>
+                                  {act.specialty && act.specialty !== act.modulo && (
+                                    <span className="block text-[0.6875rem] text-emerald-800/80">({act.specialty})</span>
+                                  )}
+                                </div>
                               </div>
                             </div>
 
-                            {/* Motivo do Algoritmo */}
-                            <p className="text-[0.6875rem] text-secondary leading-relaxed bg-surface-container-lowest/60 p-2 rounded-xl border border-surface-container/60">
-                              💡 {act.whyNow}
-                            </p>
+                            {/* Motivo do algoritmo */}
+                            <div className="flex items-center gap-3 rounded-2xl bg-violet-50 border border-violet-100 px-3 py-2.5">
+                              <span className="w-8 h-8 shrink-0 rounded-full bg-violet-100 flex items-center justify-center">
+                                <span className="material-symbols-outlined text-[1.1rem] text-violet-600">lightbulb</span>
+                              </span>
+                              <p className="text-xs text-secondary leading-relaxed">{act.whyNow}</p>
+                            </div>
 
                             {/* Fracionamento de atividade longa (ex: Bloco 1/2) */}
                             {act.chunkInfo && (
-                              <div className="flex items-center justify-between text-[0.625rem] bg-surface-container-lowest p-2 rounded-xl border border-surface-container">
-                                <span>
-                                  ✂️ Bloco {act.chunkInfo.currentChunk}/{act.chunkInfo.totalChunks} ({act.chunkInfo.chunkMinutes} min)
+                              <div className="flex items-center justify-between text-[0.6875rem] bg-surface-container-low px-3 py-2 rounded-2xl">
+                                <span className="text-secondary">
+                                  Bloco {act.chunkInfo.currentChunk}/{act.chunkInfo.totalChunks} ({act.chunkInfo.chunkMinutes} min)
                                 </span>
-                                <span className="font-bold text-primary">Progresso da teoria: {act.chunkInfo.progressPercent}%</span>
+                                <span className="font-bold text-on-surface">Teoria: {act.chunkInfo.progressPercent}%</span>
                               </div>
                             )}
 
                             {/* Calibração de Tempo Real */}
                             {act.calibratedDurationMin && act.calibratedDurationMin !== act.durationMin && (
-                              <div className="text-[0.625rem] text-secondary flex items-center gap-1">
-                                <span>⏱️</span>
+                              <div className="text-[0.6875rem] text-secondary flex items-center gap-1">
+                                <span className="material-symbols-outlined text-[0.95rem]">timer</span>
                                 <span>Calibrado para seu ritmo real: ~{act.calibratedDurationMin} min.</span>
                               </div>
                             )}
 
                             {/* Alerta de Conclusão Parcial */}
                             {act.incompleteNotice && (
-                              <div className="text-[0.625rem] text-amber-900 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg font-medium">
-                                ⚠️ {act.incompleteNotice}
+                              <div className="text-[0.6875rem] text-amber-900 bg-amber-50 border border-amber-200 px-3 py-2 rounded-2xl font-medium">
+                                {act.incompleteNotice}
                               </div>
                             )}
 
                             {/* Movido pelo Usuário */}
                             {act.isMovedByUser && (
-                              <div className="text-[0.625rem] text-primary bg-primary/10 px-2 py-0.5 rounded font-bold w-fit">
-                                👤 Movido por você (Recomendação original: {act.recommendedDay})
+                              <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 border border-emerald-100 px-3 py-2.5">
+                                <span className="w-8 h-8 shrink-0 rounded-full bg-emerald-100 flex items-center justify-center">
+                                  <span className="material-symbols-outlined text-[1.1rem] text-emerald-700" style={preenchido}>
+                                    person
+                                  </span>
+                                </span>
+                                <div className="leading-tight">
+                                  <span className="block text-sm font-bold text-emerald-900">Movido por você</span>
+                                  <span className="block text-xs text-secondary">
+                                    (Recomendação original: {(NOMES_DIA[act.recommendedDay] ?? act.recommendedDay).toLowerCase()})
+                                  </span>
+                                </div>
                               </div>
                             )}
 
                             {/* Ações da Atividade */}
-                            <div className="flex items-center justify-between pt-1 border-t border-surface-container text-xs">
-                              <div className="flex items-center gap-2">
+                            <div className="grid grid-cols-4 gap-2 pt-1">
+                              <button
+                                onClick={() =>
+                                  setSelectedDayToMove({
+                                    activity: act,
+                                    targetDay: DAY_KEYS.find((k) => k !== day.key && !diaPassou(k)) ?? day.key,
+                                  })
+                                }
+                                className={`${botaoSecundario} @[26rem]:flex-row @[26rem]:gap-1.5 !text-on-surface`}
+                              >
+                                <span className="material-symbols-outlined text-[1.15rem] text-emerald-700">bookmark</span>
+                                <span className="leading-tight text-center">Remanejar dia</span>
+                              </button>
+                              <button
+                                onClick={() => setShowChunkModal(act)}
+                                className={botaoSecundario}
+                                title="Dividir atividade em blocos menores"
+                              >
+                                <span className="material-symbols-outlined text-[1.15rem]">content_cut</span>
+                                <span>Fracionar</span>
+                              </button>
+                              <button
+                                onClick={() => setShowPartialLogModal(act)}
+                                className={botaoSecundario}
+                                title="Registrar tempo parcial estudado"
+                              >
+                                <span className="material-symbols-outlined text-[1.15rem]">event_note</span>
+                                <span>Parcial</span>
+                              </button>
+                              {!feito ? (
                                 <button
-                                  onClick={() =>
-                                    setSelectedDayToMove({
-                                      activity: act,
-                                      targetDay: DAY_KEYS.find((k) => k !== day.key && !diaPassou(k)) ?? day.key,
-                                    })
-                                  }
-                                  className="text-[0.6875rem] text-primary hover:underline font-bold"
+                                  onClick={() => handleCompleteActivity(act.id)}
+                                  className="rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-bold flex flex-col items-center justify-center gap-0.5 py-2.5 px-2 shadow-sm transition-all"
                                 >
-                                  Remanejar dia ↕
+                                  <span>Concluir</span>
+                                  <span className="material-symbols-outlined text-[1.25rem]">check</span>
                                 </button>
-                                <button
-                                  onClick={() => setShowChunkModal(act)}
-                                  className="text-[0.6875rem] text-secondary hover:text-on-surface font-medium"
-                                  title="Dividir atividade em blocos menores"
-                                >
-                                  Fracionar ✂️
-                                </button>
-                              </div>
-
-                              <div className="flex items-center gap-1.5">
-                                <button
-                                  onClick={() => setShowPartialLogModal(act)}
-                                  className="px-2 py-0.5 rounded-md bg-surface-container hover:bg-surface-container-high text-[0.625rem] font-semibold text-secondary"
-                                  title="Registrar tempo parcial estudado sem falhar"
-                                >
-                                  Parcial
-                                </button>
-                                {act.status !== 'concluido' ? (
-                                  <button
-                                    onClick={() => handleCompleteActivity(act.id)}
-                                    className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[0.6875rem] font-bold transition-all shadow-2xs"
-                                  >
-                                    Concluir ✓
-                                  </button>
-                                ) : (
-                                  <span className="text-[0.6875rem] text-emerald-700 font-bold flex items-center gap-0.5">
-                                    <span>✓</span> Feito
-                                  </span>
-                                )}
-                              </div>
+                              ) : (
+                                <span className="rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold flex flex-col items-center justify-center gap-0.5 py-2.5 px-2">
+                                  <span>Feito</span>
+                                  <span className="material-symbols-outlined text-[1.25rem]">task_alt</span>
+                                </span>
+                              )}
                             </div>
                           </div>
                         );
