@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { isMedwayPriority, medwayFocosOf } from '../utils/medwayPriorityEngine';
 import { hojeBR } from '../utils/dateBR';
 import {
   fullCurriculumHierarchy,
@@ -681,16 +682,20 @@ export const CurriculoView: React.FC<CurriculoViewProps> = ({
                                       #{content.medwayRowNumber} Medway
                                     </span>
                                   )}
+                                  {/* Prioridade Medway (focos prioritários das bancas-alvo) */}
                                   <span
                                     className={`px-2 py-0.2 rounded font-code-metric text-[0.625rem] font-bold ${
-                                      content.incidence.generalRating === 'Muito alta'
-                                        ? 'bg-rose-100 text-rose-900 border border-rose-200'
-                                        : content.incidence.generalRating === 'Alta'
+                                      isMedwayPriority(content.id)
                                         ? 'bg-amber-100 text-amber-900 border border-amber-200'
                                         : 'bg-surface-container text-secondary'
                                     }`}
+                                    title={
+                                      isMedwayPriority(content.id)
+                                        ? `Foco prioritário Medway: ${[...new Set(medwayFocosOf(content.id).map((f) => f.foco))].join(', ')}`
+                                        : 'Não está entre os focos prioritários Medway das bancas-alvo'
+                                    }
                                   >
-                                    Incidência: {content.incidence.generalRating}
+                                    {isMedwayPriority(content.id) ? '★ Prioritário Medway' : 'Não prioritário'}
                                   </span>
 
                                   {/* Status do Domínio */}
@@ -1211,36 +1216,42 @@ export const CurriculoView: React.FC<CurriculoViewProps> = ({
                                     </div>
                                   </div>
 
-                                  {/* 6. Matriz de Bancas Alvo */}
+                                  {/* 6. Prioridade Medway nas bancas-alvo */}
                                   <div className="p-3.5 rounded-xl bg-surface-container-low/70 border border-surface-container space-y-2">
                                     <div className="flex items-center justify-between">
                                       <span className="text-xs font-bold text-on-surface flex items-center gap-1.5">
                                         <span className="material-symbols-outlined text-sm text-primary">account_balance</span>
-                                        Incidência Bancas Alvo (5 anos)
+                                        Prioridade nas bancas-alvo
                                       </span>
-                                      <span className="text-[0.625rem] font-bold text-primary">
-                                        Score {content.incidence.calculatedPriorityScore}/100
+                                      <span
+                                        className={`text-[0.625rem] font-bold px-1.5 py-0.5 rounded ${
+                                          isMedwayPriority(content.id)
+                                            ? 'bg-amber-100 text-amber-900'
+                                            : 'bg-surface-container text-secondary'
+                                        }`}
+                                      >
+                                        {isMedwayPriority(content.id) ? '★ Prioritário Medway' : 'Não prioritário'}
                                       </span>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-1.5 text-[0.6875rem]">
-                                      <div className="bg-surface-container-lowest p-1.5 rounded border border-surface-container flex justify-between">
-                                        <span className="text-secondary">USP-SP:</span>
-                                        <strong className="font-code-metric">{content.incidence.usp} questões</strong>
+                                    {isMedwayPriority(content.id) ? (
+                                      <div className="space-y-1 text-[0.6875rem]">
+                                        {medwayFocosOf(content.id).map((f) => (
+                                          <div
+                                            key={f.foco}
+                                            className="bg-surface-container-lowest p-1.5 rounded border border-surface-container flex justify-between gap-2"
+                                          >
+                                            <span className="text-secondary">{f.area} › {f.tema}</span>
+                                            <strong className="text-on-surface text-right">{f.foco}</strong>
+                                          </div>
+                                        ))}
                                       </div>
-                                      <div className="bg-surface-container-lowest p-1.5 rounded border border-surface-container flex justify-between">
-                                        <span className="text-secondary">UNIFESP:</span>
-                                        <strong className="font-code-metric">{content.incidence.unifesp} questões</strong>
-                                      </div>
-                                      <div className="bg-surface-container-lowest p-1.5 rounded border border-surface-container flex justify-between">
-                                        <span className="text-secondary">ENARE:</span>
-                                        <strong className="font-code-metric">{content.incidence.enare} questões</strong>
-                                      </div>
-                                      <div className="bg-surface-container-lowest p-1.5 rounded border border-surface-container flex justify-between">
-                                        <span className="text-secondary">UFMG:</span>
-                                        <strong className="font-code-metric">{content.incidence.ufmg} questões</strong>
-                                      </div>
-                                    </div>
+                                    ) : null}
+                                    <p className="text-[0.625rem] text-secondary leading-snug">
+                                      {isMedwayPriority(content.id)
+                                        ? 'Marcado como prioritário pela Medway em pelo menos uma das suas bancas-alvo (USP-RP, USP-SP, UNICAMP, ENAMED, Einstein). Por isso sobe na fila do seu plano.'
+                                        : 'Não está entre os focos prioritários Medway dessas bancas. Continua no plano, com peso menor.'}
+                                    </p>
                                   </div>
                                 </div>
 

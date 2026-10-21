@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { isMedwayPriority, medwayFocosOf } from '../utils/medwayPriorityEngine';
 import { ContentItem } from '../types';
 import { calculateContentDomain, calculateStudyPriorityScore } from '../utils/domainCalculator';
 
@@ -91,9 +92,18 @@ export const DominioDossieModal: React.FC<DominioDossieModalProps> = ({
               <span>&bull;</span>
               <span>{content.moduloName}</span>
               <span>&bull;</span>
-              <span className="flex items-center gap-1 text-primary font-semibold">
+              <span
+                className={`flex items-center gap-1 font-semibold ${
+                  isMedwayPriority(content.id) ? 'text-amber-800' : 'text-secondary'
+                }`}
+                title={
+                  isMedwayPriority(content.id)
+                    ? `Foco prioritário Medway: ${[...new Set(medwayFocosOf(content.id).map((f) => f.foco))].join(', ')}`
+                    : 'Não está entre os focos prioritários Medway das bancas-alvo'
+                }
+              >
                 <span className="material-symbols-outlined text-xs">analytics</span>
-                Incidência: {content.incidence?.generalRating || 'Alta'}
+                {isMedwayPriority(content.id) ? '★ Prioritário Medway' : 'Não prioritário Medway'}
               </span>
             </div>
 

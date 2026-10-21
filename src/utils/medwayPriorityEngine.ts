@@ -40,6 +40,12 @@ export function medwayPriorityBoost(contentId?: string): number {
   return isMedwayPriority(contentId) ? MEDWAY_PRIORITY_WEIGHT : 0;
 }
 
+/** Focos Medway prioritários que casaram com o conteúdo (vazio se não for prioritário). */
+export function medwayFocosOf(contentId?: string): MedwayPriorityFoco[] {
+  if (!contentId) return [];
+  return medwayPriorityFocos.filter((f) => f.contentId === contentId);
+}
+
 /**
  * Ordena uma lista de contentIds colocando os focos prioritários Medway na
  * frente, preservando a ordem original dentro de cada grupo (estável).
