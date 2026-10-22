@@ -521,6 +521,7 @@ export default function App() {
       localStorage.removeItem('synapsemed_weekly_completed_minutes');
       localStorage.removeItem('synapsemed_today_available');
       localStorage.removeItem('synapsemed_week_schedule');
+      localStorage.removeItem('synapsemed_session_drafts');
       localStorage.setItem('synapsemed_storage_version', CURRENT_STORAGE_VERSION);
     }
     setActivities(initialActivities);

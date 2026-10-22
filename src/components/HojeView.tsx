@@ -44,6 +44,34 @@ interface ActivityItem {
   isMoved?: boolean;
 }
 
+/** Sessão de teoria salva sem concluir (botão "Salvar"), para continuar depois. */
+interface SessionDraft {
+  activity: ActivityItem;
+  seconds: number;
+  /** Minutos que já entraram em "Esta semana". */
+  countedMinutes: number;
+  theoryDone: boolean;
+  didPre: boolean;
+  preTotal: string;
+  preCorrect: string;
+  didPost: boolean;
+  postTotal: string;
+  postCorrect: string;
+  notes: string;
+  savedAt: string; // YYYY-MM-DD
+}
+
+const SESSION_DRAFTS_KEY = 'synapsemed_session_drafts';
+
+const loadSessionDrafts = (): Record<string, SessionDraft> => {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SESSION_DRAFTS_KEY) || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
 interface HojeViewProps {
   preferences: UserPreferences;
   onNavigateToPlanejamento?: () => void;
@@ -205,12 +233,32 @@ export const HojeView: React.FC<HojeViewProps> = ({
       });
   }, [oslerPending, curriculum]);
 
-  // Activities for Today: oslers pendentes (no topo) + plano recomendado.
-  const [activities, setActivities] = useState<ActivityItem[]>([...oslerPendingActivities, ...recommendedPlan]);
+  // Sessões salvas sem concluir ("Salvar"): por conteúdo, guardam o tempo e o
+  // que foi preenchido para continuar depois. Concluir registra tudo e apaga.
+  const [sessionDrafts, setSessionDrafts] = useState<Record<string, SessionDraft>>(loadSessionDrafts);
   useEffect(() => {
-    setActivities([...oslerPendingActivities, ...recommendedPlan]);
+    try {
+      localStorage.setItem(SESSION_DRAFTS_KEY, JSON.stringify(sessionDrafts));
+    } catch {
+      // armazenamento indisponível: o rascunho vale só nesta aba
+    }
+  }, [sessionDrafts]);
+  const draftKey = (a: ActivityItem) => a.contentId || a.id;
+
+  // Activities for Today: oslers pendentes (no topo) + sessões salvas em
+  // andamento (mesmo de outros dias) + plano recomendado.
+  const buildTodayActivities = () => {
+    const inPlan = new Set([...oslerPendingActivities, ...recommendedPlan].map((a) => a.contentId || a.id));
+    const emAndamento = (Object.values(sessionDrafts) as SessionDraft[])
+      .map((d) => d.activity)
+      .filter((a) => !inPlan.has(a.contentId || a.id));
+    return [...oslerPendingActivities, ...emAndamento, ...recommendedPlan];
+  };
+  const [activities, setActivities] = useState<ActivityItem[]>(buildTodayActivities);
+  useEffect(() => {
+    setActivities(buildTodayActivities());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recommendedPlan, oslerPendingActivities]);
+  }, [recommendedPlan, oslerPendingActivities, sessionDrafts]);
 
   // Registro de Autonomia: histórico de alterações manuais da recomendação
   const [userOverrides, setUserOverrides] = useState<UserOverrideRecord[]>([]);
@@ -239,6 +287,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
   // Timer simulation for active study session
   const [sessionTimerSeconds, setSessionTimerSeconds] = useState(0); // cronômetro começa zerado
   const [isTimerRunning, setIsTimerRunning] = useState(true);
+
 
   // Finish session form state
   const [finishTimeMinutes, setFinishTimeMinutes] = useState(47);
@@ -330,15 +379,42 @@ export const HojeView: React.FC<HojeViewProps> = ({
         return;
       }
     }
-    // TEORIA (e exercícios): registro completo aqui mesmo.
+    // TEORIA (e exercícios): registro completo aqui mesmo. Se houver uma sessão
+    // salva desse conteúdo, continua de onde parou (tempo e o que foi preenchido).
+    const draft = sessionDrafts[draftKey(activity)];
     setActiveStudySession(activity);
-    setSessionTimerSeconds(0);
+    setSessionTimerSeconds(draft?.seconds ?? 0);
     setIsTimerRunning(true);
     setFinishTimeMinutes(activity.durationMin);
-    setFinishNotes('');
-    setTheoryDone(false);
-    setDidPre(false); setPreTotal(''); setPreCorrect('');
-    setDidPost(false); setPostTotal(''); setPostCorrect('');
+    setFinishNotes(draft?.notes ?? '');
+    setTheoryDone(draft?.theoryDone ?? false);
+    setDidPre(draft?.didPre ?? false); setPreTotal(draft?.preTotal ?? ''); setPreCorrect(draft?.preCorrect ?? '');
+    setDidPost(draft?.didPost ?? false); setPostTotal(draft?.postTotal ?? ''); setPostCorrect(draft?.postCorrect ?? '');
+    if (draft) showToast(`Continuando "${activity.name}" de onde você parou (${formatSecToMin(draft.seconds)}).`);
+  };
+
+  // "Salvar": guarda o progresso sem concluir. O tempo já estudado conta na
+  // semana agora; ao concluir, só entra o que faltar.
+  const handleSaveDraft = () => {
+    if (!activeStudySession) return;
+    const key = draftKey(activeStudySession);
+    const anterior = sessionDrafts[key];
+    const minutos = Math.round(sessionTimerSeconds / 60);
+    setCompletedMinutes((prev) => prev + Math.max(0, minutos - (anterior?.countedMinutes ?? 0)));
+    setSessionDrafts((prev) => ({
+      ...prev,
+      [key]: {
+        activity: activeStudySession,
+        seconds: sessionTimerSeconds,
+        countedMinutes: Math.max(minutos, anterior?.countedMinutes ?? 0),
+        theoryDone, didPre, preTotal, preCorrect, didPost, postTotal, postCorrect,
+        notes: finishNotes,
+        savedAt: hojeBR(),
+      },
+    }));
+    setActiveStudySession(null);
+    setIsTimerRunning(false);
+    showToast(`Progresso de "${activeStudySession.name}" salvo. Clique em Continuar para retomar.`);
   };
 
   const handleCompleteDirect = (activity: ActivityItem) => {
@@ -374,7 +450,16 @@ export const HojeView: React.FC<HojeViewProps> = ({
       durationMinutes: Math.round(sessionTimerSeconds / 60) || finishTimeMinutes,
       notes: finishNotes,
     });
-    setCompletedMinutes((prev) => prev + (Math.round(sessionTimerSeconds / 60) || finishTimeMinutes));
+    // Minutos que ainda não entraram na semana (os de sessões salvas já entraram).
+    const draft = sessionDrafts[draftKey(activeStudySession)];
+    const totalMin = Math.round(sessionTimerSeconds / 60) || finishTimeMinutes;
+    setCompletedMinutes((prev) => prev + Math.max(0, totalMin - (draft?.countedMinutes ?? 0)));
+    if (draft) {
+      setSessionDrafts((prev) => {
+        const { [draftKey(activeStudySession)]: _concluida, ...resto } = prev;
+        return resto;
+      });
+    }
     setActivities((prev) => prev.filter((a) => a.id !== activeStudySession.id));
     if (activeStudySession.contentId) onCompleteWeekContent?.(activeStudySession.contentId);
     setShowFinishModal(false);
@@ -789,6 +874,23 @@ export const HojeView: React.FC<HojeViewProps> = ({
                     >
                       Prioridade {act.priority}
                     </span>
+                    {sessionDrafts[draftKey(act)] && (() => {
+                      const d = sessionDrafts[draftKey(act)];
+                      const partes = [
+                        `${formatSecToMin(d.seconds)} estudados`,
+                        d.theoryDone ? 'teoria ✓' : '',
+                        d.didPre && d.preTotal ? `pré ${d.preCorrect || 0}/${d.preTotal}` : '',
+                        d.didPost && d.postTotal ? `pós ${d.postCorrect || 0}/${d.postTotal}` : '',
+                      ].filter(Boolean);
+                      return (
+                        <span
+                          className="px-2 py-0.5 rounded-full text-[0.625rem] font-bold bg-primary/20 text-on-surface border border-primary/40"
+                          title="Sessão salva sem concluir — clique em Continuar para retomar"
+                        >
+                          ⏸ Em andamento · {partes.join(' · ')}
+                        </span>
+                      );
+                    })()}
                   </div>
 
                   {/* Ferramenta de setinha para "Por que agora?" (escondida por padrão para não poluir visualmente) */}
@@ -832,7 +934,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
                   className="px-3.5 py-2 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary-container transition-all flex items-center gap-1.5 shadow-xs"
                 >
                   <span>▶</span>
-                  <span>Iniciar</span>
+                  <span>{sessionDrafts[draftKey(act)] ? 'Continuar' : 'Iniciar'}</span>
                 </button>
 
                 <button
@@ -1186,8 +1288,13 @@ export const HojeView: React.FC<HojeViewProps> = ({
                 </h2>
               </div>
               <button
-                onClick={() => setActiveStudySession(null)}
+                onClick={() => {
+                  setActiveStudySession(null);
+                  setIsTimerRunning(false);
+                }}
                 className="p-1 rounded-lg text-secondary hover:bg-surface-container"
+                title="Fechar sem salvar"
+                aria-label="Fechar sem salvar"
               >
                 ✕
               </button>
@@ -1277,23 +1384,30 @@ export const HojeView: React.FC<HojeViewProps> = ({
             </div>
 
             {/* Footer buttons */}
-            <div className="flex items-center justify-between gap-3 pt-3 border-t border-surface-container">
-              <button
-                type="button"
-                onClick={() => setActiveStudySession(null)}
-                className="px-4 py-2.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-xs font-semibold text-secondary"
-              >
-                Pausar / Fechar
-              </button>
+            <div className="space-y-2 pt-3 border-t border-surface-container">
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={handleSaveDraft}
+                  className="px-4 py-2.5 rounded-xl border border-primary/50 bg-primary/15 hover:bg-primary/25 text-xs font-bold text-on-surface flex items-center gap-1.5 transition-all"
+                  title="Guarda o tempo e o que você preencheu, sem concluir. Continue depois em Continuar."
+                >
+                  <span className="material-symbols-outlined text-[1rem]">save</span>
+                  <span>Salvar</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={handleSaveSession}
-                className="px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-all flex items-center gap-1.5 shadow-sm"
-              >
-                <span>Salvar e concluir estudo</span>
-                <span>✓</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={handleSaveSession}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-all flex items-center gap-1.5 shadow-sm"
+                >
+                  <span>Salvar e concluir estudo</span>
+                  <span>✓</span>
+                </button>
+              </div>
+              <p className="text-[0.6875rem] text-secondary text-right">
+                Salvar guarda o progresso para continuar depois. Fechar no ✕ descarta o que não foi salvo.
+              </p>
             </div>
           </div>
         </div>
