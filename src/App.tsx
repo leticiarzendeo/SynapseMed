@@ -308,6 +308,11 @@ export default function App() {
     setOslerPending((prev) => prev.filter((p) => p.contentId !== input.contentId));
   };
 
+  // Exclui um bloco Osler informado por engano (aba Revisões).
+  const handleDeleteOslerBlock = (blockId: string) => {
+    setOslerBlocks((prev) => prev.filter((b) => b.id !== blockId));
+  };
+
   // ============================================================
   // FONTE DA VERDADE DO PROGRESSO CURRICULAR
   // Sobrepõe ao currículo estático os conteúdos efetivamente
@@ -683,6 +688,7 @@ export default function App() {
               curriculum={studiedCurriculum}
               oslerBlocks={oslerBlocks}
               onSaveOslerBlock={handleSaveOslerBlock}
+              onDeleteOslerBlock={handleDeleteOslerBlock}
             />
           )}
 

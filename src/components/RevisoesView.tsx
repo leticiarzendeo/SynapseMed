@@ -25,6 +25,7 @@ interface RevisoesViewProps {
     contentId: string; blockName: string;
     totalCards: number; easy: number; normal: number; hard: number; wrong: number;
   }) => void;
+  onDeleteOslerBlock?: (blockId: string) => void;
 }
 
 const LEVEL_UI: Record<RetentionLevel, { label: string; color: string }> = {
@@ -45,6 +46,7 @@ export const RevisoesView: React.FC<RevisoesViewProps> = ({
   curriculum,
   oslerBlocks = [],
   onSaveOslerBlock,
+  onDeleteOslerBlock,
 }) => {
   const hierarchy = curriculum ?? fullCurriculumHierarchy;
 
@@ -62,6 +64,8 @@ export const RevisoesView: React.FC<RevisoesViewProps> = ({
   const [hard, setHard] = useState('');
   const [wrong, setWrong] = useState('');
   const [formOpen, setFormOpen] = useState(false);
+  // id do bloco aguardando confirmação de exclusão
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const selectedContent = allContents.find((c) => c.id === contentId);
 
@@ -211,6 +215,35 @@ export const RevisoesView: React.FC<RevisoesViewProps> = ({
                           </span>
                           <span className="text-secondary">próx: {b.nextReviewDate}</span>
                           <span style={{ color: STATUS_UI[st].color }}>{STATUS_UI[st].label}</span>
+                          {onDeleteOslerBlock && (
+                            confirmDeleteId === b.id ? (
+                              <span className="flex items-center gap-1">
+                                <span className="text-secondary">Excluir?</span>
+                                <button
+                                  onClick={() => { onDeleteOslerBlock(b.id); setConfirmDeleteId(null); }}
+                                  className="px-2 py-0.5 rounded font-medium"
+                                  style={{ background: '#dc2626', color: '#fff' }}
+                                >
+                                  Sim
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDeleteId(null)}
+                                  className="px-2 py-0.5 rounded border border-surface-container text-secondary"
+                                >
+                                  Não
+                                </button>
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => setConfirmDeleteId(b.id)}
+                                title="Excluir este bloco"
+                                aria-label={`Excluir bloco ${b.blockName}`}
+                                className="text-secondary hover:text-error flex items-center"
+                              >
+                                <span className="material-symbols-outlined text-base">delete</span>
+                              </button>
+                            )
+                          )}
                         </div>
                       </div>
                     );
